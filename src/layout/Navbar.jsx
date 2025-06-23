@@ -62,7 +62,7 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            {/* <LogOut setIsOpen={setIsOpen} /> */}
+            <LogOut setIsOpen={setIsOpen} />
             <Link to="/profile">
               <Avatar url={user.user_metadata?.avatar_url} name={user.user_metadata?.full_name || user.email} size={60} />
             </Link>
