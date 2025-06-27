@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient.js';
 import MuxPlayer from '@mux/mux-player-react';
 import { FaRegHeart, FaHeart, FaEdit } from 'react-icons/fa';
@@ -26,8 +26,10 @@ export default function Technique() {
   const [isProcessingLike, setIsProcessingLike] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({ title: '', description: '', position: '' });
+  const [editData, setEditData] = useState({ title: '', description: '', position: '', thumbnail_time: null });
   const [updateError, setUpdateError] = useState(null);
+  const navigate = useNavigate();
+  const videoRef = useRef();
 
   const guardOptions = [
     'Standing',
@@ -71,6 +73,7 @@ export default function Technique() {
         title: technique.title || '',
         description: technique.description || '',
         position: technique.position || '',
+        thumbnail_time: technique.thumbnail_time || 0,
       });
     }
   }, [technique]);
@@ -284,6 +287,12 @@ export default function Technique() {
     setEditData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleCaptureFrame = () => {
+    if (videoRef.current) {
+      setEditData((prev) => ({ ...prev, thumbnail_time: Math.floor(videoRef.current.currentTime) }));
+    }
+  };
+
   const handleUpdate = async (e) => {
     e.preventDefault();
     setUpdateError(null);
@@ -291,9 +300,12 @@ export default function Technique() {
       setUpdateError('Title and position are required.');
       return;
     }
-
-    const { data, error } = await supabase.from('techniques').update(editData).eq('id', id).select().single();
-
+    const updatePayload = { ...editData };
+    // Ensure thumbnail_time is an integer
+    if (updatePayload.thumbnail_time !== null) {
+      updatePayload.thumbnail_time = Math.floor(updatePayload.thumbnail_time);
+    }
+    const { data, error } = await supabase.from('techniques').update(updatePayload).eq('id', id).select().single();
     if (error) {
       console.error('Error updating technique:', error);
       setUpdateError(error.message);
@@ -301,6 +313,51 @@ export default function Technique() {
       setTechnique(data);
       setIsEditing(false);
     }
+  };
+
+  const handleDelete = async (e) => {
+    e.preventDefault();
+    if (!window.confirm('Are you sure you want to delete this video? This cannot be undone.')) return;
+
+    // Get the user's session token
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      alert('You must be logged in to delete a video.');
+      return;
+    }
+
+    // 1. Delete from Mux via Edge Function
+    try {
+      const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://mrpiclpwihtqzgywfocm.functions.supabase.co';
+      const res = await fetch(`${functionsUrl}/mux_delete_asset`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          mux_playback_id: technique.mux_playback_id,
+          technique_id: technique.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete from Mux');
+      }
+    } catch (err) {
+      alert('Failed to delete video from Mux: ' + err.message);
+      return;
+    }
+    // 2. Delete from Supabase
+    const { error } = await supabase.from('techniques').delete().eq('id', technique.id);
+    if (error) {
+      alert('Failed to delete from database: ' + error.message);
+      return;
+    }
+    // 3. Redirect
+    navigate('/');
   };
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
@@ -370,18 +427,52 @@ export default function Technique() {
                   className="w-full border border-white text-white placeholder-gray-400 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-white-500"
                 ></textarea>
               </div>
-              {updateError && <p className="text-red-500 text-sm mb-4">{updateError}</p>}
-              <div className="flex gap-4">
-                <button type="submit" className="border border-white hover:bg-white hover:text-black text-white font-bold py-2 px-4 rounded">
-                  Save Changes
-                </button>
+              <div className="mb-4">
+                <label className="block text-white mb-2">Video Preview & Thumbnail</label>
+                <MuxPlayer
+                  ref={videoRef}
+                  playbackId={technique.mux_playback_id}
+                  metadata={{ video_id: technique.id, video_title: technique.title }}
+                  className="w-full rounded mb-2"
+                  controls
+                  style={{ maxHeight: 320 }}
+                />
                 <button
                   type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="border border-white hover:bg-white hover:text-black text-white font-bold py-2 px-4 rounded"
+                  onClick={handleCaptureFrame}
+                  className={`mt-2 px-4 py-2 border border-white text-white rounded-md font-bold hover:bg-white hover:text-black transition ${
+                    editData.thumbnail_time !== null ? 'opacity-70' : ''
+                  }`}
                 >
-                  Cancel
+                  {editData.thumbnail_time === null ? 'Select This Frame as Thumbnail' : `Frame Selected at ${Math.floor(editData.thumbnail_time)}s`}
                 </button>
+                {editData.thumbnail_time !== null && (
+                  <div className="text-xs text-gray-400 mt-1">Selected thumbnail time: {Math.floor(editData.thumbnail_time)} seconds</div>
+                )}
+              </div>
+              {updateError && <p className="text-red-500 text-sm mb-4">{updateError}</p>}
+              <div className="flex gap-4 justify-between">
+                <div className="flex gap-4">
+                  <button type="submit" className="border border-white hover:bg-white hover:text-black text-white font-bold py-2 px-4 rounded">
+                    Save Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="border border-white hover:bg-white hover:text-black text-white font-bold py-2 px-4 rounded"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    className="border border-red-500 hover:bg-red-500 hover:text-white text-red-500 font-bold py-2 px-4 rounded"
+                  >
+                    Delete Video
+                  </button>
+                </div>
               </div>
             </form>
           ) : (

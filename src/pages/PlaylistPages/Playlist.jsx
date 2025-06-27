@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import SearchAndFilter from '../../components/SearchAndFilter.jsx';
+import { RiVideoUploadLine } from 'react-icons/ri';
+import { FaPhotoVideo } from 'react-icons/fa';
 
 export default function Playlist() {
   const { user } = useAuth();
@@ -31,7 +33,8 @@ export default function Playlist() {
               title,
               position,
               description,
-              mux_playback_id
+              mux_playback_id,
+              thumbnail_time
             )
           `
           )
@@ -91,21 +94,23 @@ export default function Playlist() {
         <h1 className="text-3xl font-bold text-white">Playlist</h1>
         <div className="flex items-center gap-6">
           <Link to="/" className="hover:underline font-semibold px-4 py-2 rounded-md">
-            All Techniques
+            <FaPhotoVideo size={22} className="mr-2" />
           </Link>
-          <Link to="/addTechnique" className="hover:bg-white hover:text-black font-semibold px-4 py-2 rounded-md border border-white">
-            + Add Technique
+          <Link to="/addTechnique" className="bg-white text-black hover:bg-neutral-200  font-semibold px-4 py-2 rounded-md border border-white flex items-center">
+            <RiVideoUploadLine size={22} className="mr-2" />
           </Link>
         </div>
       </div>
       <SearchAndFilter onSearchChange={setSearchTerm} onFilterChange={setSelectedPosition} />
       {filteredPlaylist.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {filteredPlaylist.map((technique) => (
             <Link to={`/technique/${technique.id}`} key={technique.id} className="block">
               <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                 <img
-                  src={`https://image.mux.com/${technique.mux_playback_id}/thumbnail.jpg?width=320`}
+                  src={`https://image.mux.com/${technique.mux_playback_id}/thumbnail.jpg?width=320${
+                    technique.thumbnail_time !== undefined && technique.thumbnail_time !== null ? `&time=${technique.thumbnail_time}` : ''
+                  }`}
                   alt={technique.title || 'Video thumbnail'}
                   className="absolute top-0 left-0 w-full h-full object-cover rounded"
                 />

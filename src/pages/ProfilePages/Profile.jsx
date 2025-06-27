@@ -77,12 +77,11 @@ export default function Profile() {
   return (
     <div className="pt-20">
       <div className="xl:w-1/3 lg:w-2/3 sm:w-3/4 px-5 mx-auto mt-12">
-        <div className="flex justify-center">
-          {profileData && <Avatar url={avatarUrl} name={profileData.fullName} onUpload={() => setUploaderOpen(true)} size={100} />}
-        </div>
-
         {profileData ? (
           <div>
+            <div className="flex justify-center">
+              {profileData && <Avatar url={avatarUrl} name={profileData.fullName} onUpload={() => setUploaderOpen(true)} size={100} />}
+            </div>
             <div>
               <h3 className="mb-0 text-2xl font-bold text-center">{profileData.fullName}</h3>
               <p className="text-center text-sm text-gray-500">{profileData.beltLevel}</p>
@@ -93,14 +92,16 @@ export default function Profile() {
         )}
       </div>
       <div className="mt-12">
-        <h4 className="text-xl font-bold text-center">My Videos</h4>
+        <h4 className="text-xl font-bold ">Video Uploads</h4>
         {techniques.length > 0 ? (
           <div className="grid md:grid-cols-3 grid-cols-2 gap-4 mt-8">
             {techniques.map((tech) => (
               <Link to={`/technique/${tech.id}`} key={tech.id} className="block">
                 <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                   <img
-                    src={`https://image.mux.com/${tech.mux_playback_id}/thumbnail.jpg?width=320`}
+                    src={`https://image.mux.com/${tech.mux_playback_id}/thumbnail.jpg?width=320${
+                      tech.thumbnail_time !== undefined && tech.thumbnail_time !== null ? `&time=${tech.thumbnail_time}` : ''
+                    }`}
                     alt={tech.title || 'Video thumbnail'}
                     className="absolute top-0 left-0 w-full h-full object-cover rounded"
                   />

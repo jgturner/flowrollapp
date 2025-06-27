@@ -3,6 +3,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient.js';
 import { Link } from 'react-router-dom';
 import SearchAndFilter from './components/SearchAndFilter.jsx';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import VideoReadyPoller from './components/VideoReadyPoller.jsx';
+import { MdPlaylistPlay, MdOutlineAddToPhotos } from 'react-icons/md';
+import { RiVideoUploadLine } from 'react-icons/ri';
 
 function App() {
   const [techniques, setTechniques] = useState([]);
@@ -43,14 +48,15 @@ function App() {
 
   return (
     <>
+      <VideoReadyPoller />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-white ">Videos</h1>
         <div className="flex items-center gap-6">
-          <Link to="/playlist" className="hover:underline font-semibold px-4 py-2 rounded-md">
-            My Playlist
+          <Link to="/playlist" className="hover:underline font-semibold px-4 py-2 rounded-md flex items-center">
+            <MdPlaylistPlay size={24} className="mr-2" />
           </Link>
-          <Link to="/addTechnique" className="hover:bg-white hover:text-black font-semibold px-4 py-2 rounded-md border border-white">
-            + Add Technique
+          <Link to="/addTechnique" className="bg-white text-black hover:bg-neutral-200  font-semibold px-4 py-2 rounded-md border border-white flex items-center">
+            <RiVideoUploadLine size={22} className="mr-2" />
           </Link>
         </div>
       </div>
@@ -65,7 +71,9 @@ function App() {
             <Link to={`/technique/${tech.id}`} key={tech.id} className="block">
               <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                 <img
-                  src={`https://image.mux.com/${tech.mux_playback_id}/thumbnail.jpg?width=320`}
+                  src={`https://image.mux.com/${tech.mux_playback_id}/thumbnail.jpg?width=320${
+                    tech.thumbnail_time !== undefined && tech.thumbnail_time !== null ? `&time=${tech.thumbnail_time}` : ''
+                  }`}
                   alt={tech.title || 'Video thumbnail'}
                   className="absolute top-0 left-0 w-full h-full object-cover rounded"
                 />

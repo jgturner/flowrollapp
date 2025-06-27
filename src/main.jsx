@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import './index.css';
 import App from './App.jsx';
 import Technique from './Technique.jsx';
@@ -12,11 +12,19 @@ import ResetPassword from './pages/AuthPages/ResetPassword.jsx';
 import AddTechnique from './pages/TechniquePage/AddTechnique.jsx';
 import Profile from './pages/ProfilePages/Profile.jsx';
 import Playlist from './pages/PlaylistPages/Playlist.jsx';
+import TechniqueDetailsForm from './components/TechniqueDetailsForm.jsx';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null; // or a loading spinner
   return user ? children : <Navigate to="/login" replace />;
+}
+
+function TechniqueDetailsFormWrapper() {
+  const { uploadId } = useParams();
+  const location = useLocation();
+  const { playbackId, videoDuration } = location.state || {};
+  return <TechniqueDetailsForm uploadId={uploadId} playbackId={playbackId} videoDuration={videoDuration} />;
 }
 
 createRoot(document.getElementById('root')).render(
@@ -40,6 +48,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="/playlist" element={<Playlist />} />
             <Route path="/addTechnique" element={<AddTechnique />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/addTechnique/details/:uploadId" element={<TechniqueDetailsFormWrapper />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
@@ -47,3 +56,5 @@ createRoot(document.getElementById('root')).render(
     </AuthProvider>
   </StrictMode>
 );
+
+export default AddTechnique;
