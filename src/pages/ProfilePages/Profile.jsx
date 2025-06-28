@@ -10,6 +10,7 @@ import { MdFitnessCenter } from 'react-icons/md';
 import { RiVideoUploadLine } from 'react-icons/ri';
 import { SiInstagram, SiFacebook, SiTiktok } from 'react-icons/si';
 import { FaLink, FaTwitter, FaYoutube } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import EditProfileForm from '../../components/EditProfileForm';
 
 // Placeholder imports for new components
@@ -167,7 +168,7 @@ export default function Profile() {
                 )}
                 {profileData.x_url && (
                   <a href={profileData.x_url} aria-label="X (Twitter)" className="hover:text-blue-400 transition-colors" target="_blank" rel="noopener noreferrer">
-                    <FaTwitter size={24} />
+                    <FaXTwitter size={24} />
                   </a>
                 )}
                 {profileData.facebook_url && (
