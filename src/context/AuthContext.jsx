@@ -8,29 +8,30 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const setData = async (session) => {
-      if (session) {
-        const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+  // Move setData outside useEffect so it can be used by refreshUser
+  const setData = async (session) => {
+    if (session) {
+      const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching profile:', error);
-          setUser(session.user); // Fallback to user without profile
-        } else if (profile) {
-          if (profile.avatar_url) {
-            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_url);
-            profile.avatar_url = urlData.publicUrl;
-          }
-          setUser({ ...session.user, profile });
-        } else {
-          setUser({ ...session.user, profile: null });
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile:', error);
+        setUser(session.user); // Fallback to user without profile
+      } else if (profile) {
+        if (profile.avatar_url) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_url);
+          profile.avatar_url = urlData.publicUrl;
         }
+        setUser({ ...session.user, profile });
       } else {
-        setUser(null);
+        setUser({ ...session.user, profile: null });
       }
-      setLoading(false);
-    };
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
+  };
 
+  useEffect(() => {
     // Run once on startup
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -78,6 +79,17 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  // Add refreshUser function
+  const refreshUser = async () => {
+    setLoading(true);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    setSession(session);
+    await setData(session);
+    setLoading(false);
+  };
+
   const value = {
     user,
     session,
@@ -86,6 +98,7 @@ export function AuthProvider({ children }) {
     register,
     logout,
     resetPassword,
+    refreshUser, // Expose refreshUser
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

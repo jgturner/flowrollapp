@@ -54,6 +54,7 @@ export default function AddTechnique() {
     'Saddle (Inside Sankaku)',
     'Outside Ashii',
     'Single Leg X',
+    'Competition/Match',
   ];
 
   if (!user) {

@@ -13,6 +13,8 @@ import AddTechnique from './pages/TechniquePage/AddTechnique.jsx';
 import Profile from './pages/ProfilePages/Profile.jsx';
 import Playlist from './pages/PlaylistPages/Playlist.jsx';
 import TechniqueDetailsForm from './components/TechniqueDetailsForm.jsx';
+import TrainingForm from './pages/TrainingPage/TrainingForm.jsx';
+import SingleSession from './pages/TrainingPage/SingleSession.jsx';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -49,6 +51,8 @@ createRoot(document.getElementById('root')).render(
             <Route path="/addTechnique" element={<AddTechnique />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/addTechnique/details/:uploadId" element={<TechniqueDetailsFormWrapper />} />
+            <Route path="/training/new" element={<TrainingForm />} />
+            <Route path="/training/:id" element={<SingleSession />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
