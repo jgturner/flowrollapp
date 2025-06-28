@@ -6,7 +6,7 @@ import ProfileImageUploader from '../../components/ProfileImageUploader';
 import { supabase } from '../../../utils/supabaseClient.js';
 import TrainingStats from '../../components/TrainingStats';
 import TrainingHistory from '../../components/TrainingHistory';
-import { MdFitnessCenter, MdOutlineQueryStats, MdSettings } from 'react-icons/md';
+import { MdFitnessCenter, MdOutlineQueryStats } from 'react-icons/md';
 import { RiVideoUploadLine } from 'react-icons/ri';
 import { SiInstagram, SiFacebook, SiTiktok } from 'react-icons/si';
 import { FaLink, FaTwitter, FaYoutube } from 'react-icons/fa';
@@ -223,11 +223,12 @@ export default function Profile() {
               <div className="w-full md:w-1/6">
                 {profileData && user && user.id === profileData.user_id && (
                   <div className="flex justify-center mb-6">
-                    <div className="w-full flex justify-end">
-                      <button className=" px-4 py-1  flex items-center" onClick={() => setEditModalOpen(true)} aria-label="Edit Profile">
-                        <MdSettings size={22} />
-                      </button>
-                    </div>
+                    <button
+                      className="border border-white text-sm text-white px-3 py-1 rounded hover:bg-white hover:text-black w-full"
+                      onClick={() => setEditModalOpen(true)}
+                    >
+                      Edit Profile
+                    </button>
                   </div>
                 )}
               </div>
