@@ -83,14 +83,14 @@ const ProfileImageUploader = ({ isOpen, onRequestClose, onUploadComplete }) => {
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
       const newAvatarUrl = `${urlData.publicUrl}?t=${new Date().getTime()}`;
 
-      // Update the user's metadata
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { avatar_url: newAvatarUrl },
-      });
-
-      if (updateError) {
-        throw updateError;
+      // Update the profiles table with the file path
+      const { error: profileError } = await supabase.from('profiles').update({ avatar_url: filePath }).eq('id', user.id);
+      if (profileError) {
+        throw profileError;
       }
+
+      // Optionally update the user's auth metadata for backward compatibility
+      await supabase.auth.updateUser({ data: { avatar_url: newAvatarUrl } });
 
       onUploadComplete(newAvatarUrl);
       onRequestClose();

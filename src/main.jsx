@@ -15,6 +15,8 @@ import Playlist from './pages/PlaylistPages/Playlist.jsx';
 import TechniqueDetailsForm from './components/TechniqueDetailsForm.jsx';
 import TrainingForm from './pages/TrainingPage/TrainingForm.jsx';
 import SingleSession from './pages/TrainingPage/SingleSession.jsx';
+import GymsPage from './pages/GymsPage.jsx';
+import SingleGymPage from './pages/SingleGymPage.jsx';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -37,6 +39,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+
           <Route
             path="/"
             element={
@@ -45,6 +48,8 @@ createRoot(document.getElementById('root')).render(
               </ProtectedRoute>
             }
           >
+            <Route path="/gyms" element={<GymsPage />} />
+            <Route path="/gym/:id" element={<SingleGymPage />} />
             <Route index element={<App />} />
             <Route path="technique/:id" element={<Technique />} />
             <Route path="/playlist" element={<Playlist />} />

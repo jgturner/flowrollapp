@@ -6,20 +6,21 @@ import ProfileImageUploader from '../../components/ProfileImageUploader';
 import { supabase } from '../../../utils/supabaseClient.js';
 import TrainingStats from '../../components/TrainingStats';
 import TrainingHistory from '../../components/TrainingHistory';
-import { MdFitnessCenter, MdOutlineQueryStats, MdSettings } from 'react-icons/md';
+import { MdFitnessCenter, MdOutlineQueryStats, MdSettings, MdHome } from 'react-icons/md';
 import { RiVideoUploadLine } from 'react-icons/ri';
 import { SiInstagram, SiFacebook, SiTiktok } from 'react-icons/si';
 import { FaLink, FaTwitter, FaYoutube } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import EditProfileForm from '../../components/EditProfileForm';
 import { AnimatePresence, motion } from 'framer-motion';
+import GymProfileForm from '../../components/GymProfileForm';
 
 // Placeholder imports for new components
 // import TrainingStats from '../../components/TrainingStats';
 // import TrainingHistory from '../../components/TrainingHistory';
 
 export default function Profile() {
-  const { user, loading, refreshUser } = useAuth();
+  const { user, loading, refreshUser, logout } = useAuth();
   const [profileData, setProfileData] = useState(null);
   const [isUploaderOpen, setUploaderOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
@@ -27,6 +28,9 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('videos');
   const navigate = useNavigate();
   const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [userGym, setUserGym] = useState(null);
+  const [userGymName, setUserGymName] = useState(null);
+  const [userGymId, setUserGymId] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -83,6 +87,19 @@ export default function Profile() {
           tiktok_url,
           website_url,
         });
+        // Fetch active gym from gym_followers
+        (async () => {
+          const { data: follower } = await supabase.from('gym_followers').select('gym_id').eq('user_id', user.id).eq('status', 'approved').eq('active', true).single();
+          if (follower && follower.gym_id) {
+            setUserGymId(follower.gym_id);
+            const { data: gym, error: gymError } = await supabase.from('gyms').select('name').eq('id', follower.gym_id).single();
+            if (!gymError && gym) setUserGymName(gym.name);
+            else setUserGymName(null);
+          } else {
+            setUserGymName(null);
+            setUserGymId(null);
+          }
+        })();
       }
     }
 
@@ -98,7 +115,17 @@ export default function Profile() {
       }
     }
 
+    // Check if user owns a gym
+    async function fetchUserGym() {
+      if (user) {
+        const { data, error } = await supabase.from('gyms').select('*').eq('owner_user_id', user.id).single();
+        if (!error && data) setUserGym(data);
+        else setUserGym(null);
+      }
+    }
+
     fetchTechniques();
+    fetchUserGym();
   }, [user]);
 
   const handleUploadComplete = (newUrl) => {
@@ -169,10 +196,22 @@ export default function Profile() {
                 )}
 
                 <div>
-                  <h3 className="mb-3 text-2xl font-bold ">
+                  <h3 className=" text-2xl font-bold ">
                     {profileData.first_name || profileData.last_name ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : profileData.fullName}
                   </h3>
-                  <p className={`text-sm mb-6 border-2 rounded-md px-2 py-1 text-center mt-1 ${getBeltClass(profileData.beltLevel)}`}>{profileData.beltLevel}</p>
+                  <p className="mb-3">
+                    {/* Show gym name if user is a gym owner, otherwise show active gym */}
+                    {userGym && userGym.id && userGym.name ? (
+                      <Link to={`/gym/${userGym.id}`} className="text-base font-semibold text-blue-400 mt-1 hover:underline">
+                        {userGym.name}
+                      </Link>
+                    ) : userGymName && userGymId ? (
+                      <Link to={`/gym/${userGymId}`} className="text-base font-semibold text-blue-400 mt-1 hover:underline">
+                        {userGymName}
+                      </Link>
+                    ) : null}
+                  </p>
+                  <p className={`text-sm mb-3 border-2 rounded-md px-2 py-1 text-center mt-1 ${getBeltClass(profileData.beltLevel)}`}>{profileData.beltLevel}</p>
                   <div className="flex justify-center gap-6">
                     {profileData.youtube_url && (
                       <a href={profileData.youtube_url} target="_blank" rel="noopener noreferrer" aria-label="YouTube">
@@ -250,6 +289,11 @@ export default function Profile() {
         <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none text-white`} onClick={() => setActiveTab('videos')}>
           <RiVideoUploadLine size={22} className="mr-2" />
         </button>
+        {userGym && (
+          <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none text-white`} onClick={() => setActiveTab('gym')} title="Manage Gym">
+            <MdHome size={22} />
+          </button>
+        )}
         <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none text-white`} onClick={() => setActiveTab('settings')}>
           <MdSettings size={22} />
         </button>
@@ -320,6 +364,56 @@ export default function Profile() {
               <h4 className="text-xl font-bold mb-4">Stats</h4>
               {/* Add your stats content here, or reuse <TrainingStats userId={user.id} /> if appropriate */}
               <TrainingStats userId={user.id} />
+            </motion.div>
+          )}
+          {activeTab === 'gym' && (
+            <motion.div
+              key="gym"
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 40 }}
+              transition={{ duration: 0.35, ease: 'easeInOut' }}
+            >
+              <GymProfileForm
+                gym={userGym}
+                user={user}
+                onSave={async () => {
+                  // Refresh gym state after save
+                  if (user) {
+                    const { data, error } = await supabase.from('gyms').select('*').eq('owner_user_id', user.id).single();
+                    if (!error && data) setUserGym(data);
+                  }
+                }}
+                onDelete={() => {
+                  setUserGym(null);
+                  setActiveTab('videos');
+                }}
+              />
+            </motion.div>
+          )}
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 40 }}
+              transition={{ duration: 0.35, ease: 'easeInOut' }}
+            >
+              <h4 className="text-xl font-bold mb-4">Settings</h4>
+              {!userGym && (
+                <button className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-semibold mb-6" onClick={() => setActiveTab('gym')}>
+                  Create Gym Profile
+                </button>
+              )}
+              <button
+                className="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-semibold mt-6"
+                onClick={async () => {
+                  await logout();
+                  navigate('/login', { replace: true });
+                }}
+              >
+                Log Out
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

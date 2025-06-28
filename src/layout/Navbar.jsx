@@ -44,15 +44,7 @@ export default function Navbar() {
       {/* DESKTOP NAVIGATION */}
 
       <nav className={`font-bold lg:flex lg:flex-row hidden items-center gap-4`}>
-        {/* <Link to="/gyms">Gyms</Link>
-        <Link to="/">Open Mats</Link>
-        <Link to="/">Seminars</Link>
-        <Link to="/">Competitions</Link>
-         <Link to="/">Instructionals</Link>
-         <Link to="/">Resources</Link>
-        
-        */}
-
+        <Link to="/gyms">Gyms</Link>
         <Link to="/">Videos</Link>
 
         {!user ? (
@@ -62,7 +54,6 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            <LogOut setIsOpen={setIsOpen} />
             <Link to="/profile">
               <Avatar url={user.user_metadata?.avatar_url} name={user.user_metadata?.full_name || user.email} size={60} />
             </Link>
@@ -78,21 +69,9 @@ export default function Navbar() {
         }
          flex flex-col lg:pt-6 pt-4`}
       >
-        {/* <Link to="/" onClick={linkClicked}>
+        <Link to="/gyms" onClick={linkClicked}>
           Gyms
         </Link>
-        <Link to="/" onClick={linkClicked}>
-          Open Mats
-        </Link>
-        <Link to="/" onClick={linkClicked}>
-          Seminars
-        </Link>
-        <Link to="/" onClick={linkClicked}>
-          Competitions
-        </Link>
-        <Link to="/" onClick={linkClicked}>
-          Instructionals
-        </Link> */}
         <Link to="/" onClick={linkClicked}>
           Videos
         </Link>
