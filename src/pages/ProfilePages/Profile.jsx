@@ -117,8 +117,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="pt-20">
-      <div className="xl:w-1/3 lg:w-2/3 sm:w-3/4 px-5 mx-auto mt-12 relative">
+    <div className="pt-8">
+      <div className="xl:w-1/3 lg:w-2/3 sm:w-3/4 px-5 mx-auto  relative">
         {/* Edit Profile Button */}
 
         {isEditModalOpen && (
@@ -151,13 +151,7 @@ export default function Profile() {
               <p className="text-center text-sm text-gray-500 mb-6">{profileData.beltLevel}</p>
               <div className="flex justify-center gap-6 mb-8">
                 {profileData.youtube_url && (
-                  <a
-                    href={profileData.youtube_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="YouTube"
-                    className="text-red-600 hover:text-red-700 transition-colors"
-                  >
+                  <a href={profileData.youtube_url} target="_blank" rel="noopener noreferrer" aria-label="YouTube">
                     <FaYoutube size={24} />
                   </a>
                 )}
@@ -188,8 +182,8 @@ export default function Profile() {
                 )}
               </div>
               {profileData && user && user.id === profileData.user_id && (
-                <div className="flex justify-center mb-4">
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onClick={() => setEditModalOpen(true)}>
+                <div className="flex justify-center mb-6">
+                  <button className="border border-white text-white px-4 py-1 rounded hover:bg-white hover:text-black" onClick={() => setEditModalOpen(true)}>
                     Edit Profile
                   </button>
                 </div>
@@ -245,7 +239,7 @@ export default function Profile() {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="text-xl font-bold">Training</h4>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onClick={() => navigate('/training/new')}>
+              <button className="border border-white text-white px-4 py-1 rounded hover:bg-white hover:text-black" onClick={() => navigate('/training/new')}>
                 + Log Session
               </button>
             </div>

@@ -87,12 +87,12 @@ export default function TrainingHistory({ userId }) {
                 </span>
                 <span className="text-xs text-gray-500">{s.format_uniform}</span>
               </div>
-              <div className="text-sm text-gray-700 mb-1">{s.location}</div>
-              {s.class_summary && <div className="text-xs text-gray-600 mb-1">Summary: {s.class_summary}</div>}
-              {s.notes && <div className="text-xs text-gray-500 mb-1">Notes: {s.notes}</div>}
+              <div className="text-sm text-white mb-1">{s.location}</div>
+              {s.class_summary && <div className="text-xs text-white mb-0">Summary: {s.class_summary}</div>}
+              {s.notes && <div className="text-xs text-white mb-3">Notes: {s.notes}</div>}
               <div className="flex flex-wrap gap-2 text-xs mt-1">
                 <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Sparring: {s.sparring ? 'Yes' : 'No'}</span>
-                {s.sparring && <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">Rounds: {s.rounds}</span>}
+                {s.sparring && <span className="bg-neutral-100 text-gray-700 px-2 py-0.5 rounded">Rounds: {s.rounds}</span>}
                 {s.sparring && <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">Minutes/Round: {s.minutes_per_round}</span>}
               </div>
             </li>
