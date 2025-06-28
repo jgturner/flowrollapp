@@ -6,7 +6,7 @@ import ProfileImageUploader from '../../components/ProfileImageUploader';
 import { supabase } from '../../../utils/supabaseClient.js';
 import TrainingStats from '../../components/TrainingStats';
 import TrainingHistory from '../../components/TrainingHistory';
-import { MdFitnessCenter, MdOutlineQueryStats } from 'react-icons/md';
+import { MdFitnessCenter, MdOutlineQueryStats, MdSettings } from 'react-icons/md';
 import { RiVideoUploadLine } from 'react-icons/ri';
 import { SiInstagram, SiFacebook, SiTiktok } from 'react-icons/si';
 import { FaLink, FaTwitter, FaYoutube } from 'react-icons/fa';
@@ -136,7 +136,7 @@ export default function Profile() {
 
   return (
     <div className="pt-2">
-      <div className="px-5 mx-auto">
+      <div className=" mx-auto">
         {/* Edit Profile Button */}
 
         <AnimatePresence>
@@ -156,7 +156,7 @@ export default function Profile() {
         {profileData ? (
           <div>
             <div className="flex md:justify-between justify-center flex-wrap">
-              <div className="flex gap-4 mb-6 ">
+              <div className="flex gap-4 mb-6">
                 {profileData && (
                   <Avatar
                     url={avatarUrl}
@@ -249,6 +249,9 @@ export default function Profile() {
         </button>
         <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none text-white`} onClick={() => setActiveTab('videos')}>
           <RiVideoUploadLine size={22} className="mr-2" />
+        </button>
+        <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none text-white`} onClick={() => setActiveTab('settings')}>
+          <MdSettings size={22} />
         </button>
       </div>
       <hr className="border-white" />
