@@ -135,7 +135,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="pt-8">
+    <div className="pt-2">
       <div className="px-5 mx-auto">
         {/* Edit Profile Button */}
 
