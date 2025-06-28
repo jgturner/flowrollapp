@@ -100,7 +100,7 @@ export default function TrainingStats({ userId }) {
           className={`px-4 py-1 rounded font-semibold transition ${view === 'category' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
           onClick={() => setView('category')}
         >
-          Category
+          Positions
         </button>
       </div>
       {view === 'format' && (

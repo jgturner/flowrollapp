@@ -11,6 +11,7 @@ import Avatar from './components/Avatar.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 import Comments from './components/Comments.jsx';
 import DescriptionRenderer from './components/DescriptionRenderer.jsx';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Technique() {
   const { id } = useParams();
@@ -30,6 +31,9 @@ export default function Technique() {
   const [updateError, setUpdateError] = useState(null);
   const navigate = useNavigate();
   const videoRef = useRef();
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const descRef = useRef(null);
+  const [descHeight, setDescHeight] = useState({ collapsed: 0, expanded: 0 });
 
   const guardOptions = [
     'Standing',
@@ -193,6 +197,19 @@ export default function Technique() {
       fetchLikes();
     }
   }, [id, user]);
+
+  useEffect(() => {
+    if (descRef.current) {
+      // Temporarily remove line clamp to measure full height
+      const el = descRef.current;
+      const prev = el.className;
+      el.className = prev.replace('line-clamp-3', '');
+      const expanded = el.scrollHeight;
+      el.className = prev;
+      const collapsed = getComputedStyle(el).lineHeight.replace('px', '') * 3;
+      setDescHeight({ collapsed: Number(collapsed), expanded });
+    }
+  }, [technique?.description]);
 
   const handlePlaylistClick = async () => {
     if (!user) {
@@ -479,14 +496,14 @@ export default function Technique() {
             <>
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-white mb-0 pb-0">{technique.title}</h1>
+                  <h1 className="md:text-2xl text-xl font-bold text-white mb-0 pb-0">{technique.title}</h1>
                   <div className="text-gray-400 mb-4 mt-[-7px]">{technique.position}</div>
                 </div>
 
                 {isOwner && (
                   <div>
-                    <button onClick={() => setIsEditing(true)}>
-                      <FaEdit size={25} />
+                    <button onClick={() => setIsEditing(true)} className="pt-1.5">
+                      <FaEdit size={20} />
                     </button>
                   </div>
                 )}
@@ -531,8 +548,21 @@ export default function Technique() {
 
               <hr className="border-gray-700 mt-2 mb-4" />
 
-              <div className="text-gray-400 mb-4">
-                <DescriptionRenderer text={technique.description} />
+              <div className="text-white mb-4">
+                <motion.div
+                  animate={{ height: showFullDescription ? descHeight.expanded : descHeight.collapsed }}
+                  style={{ overflow: 'hidden' }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                >
+                  <div ref={descRef} className={showFullDescription ? '' : 'line-clamp-3'}>
+                    <DescriptionRenderer text={technique.description} />
+                  </div>
+                </motion.div>
+                {technique.description && technique.description.split(/\r?\n|<br\s*\/?>(?=\s*\S)/gi).length > 3 && (
+                  <button className="mt-2 text-blue-400 hover:text-blue-500 text-sm focus:outline-none" onClick={() => setShowFullDescription((prev) => !prev)}>
+                    {showFullDescription ? 'Show less' : 'Show more'}
+                  </button>
+                )}
               </div>
 
               <Comments techniqueId={id} />

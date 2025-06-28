@@ -61,6 +61,11 @@ export default function SingleSession() {
       <div className="mb-4">
         <span className="font-semibold text-white">Format/Uniform:</span> {session.format_uniform}
       </div>
+      {session.category && (
+        <div className="mb-4">
+          <span className="font-semibold text-white">Category:</span> {session.category}
+        </div>
+      )}
       {session.class_summary && (
         <div className="mb-4">
           <span className="font-semibold text-white">Class Summary:</span> {session.class_summary}
@@ -84,12 +89,15 @@ export default function SingleSession() {
           </div>
         </>
       )}
-      <div className="flex gap-4 mt-8">
-        <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onClick={handleEdit}>
+      <div className="flex flex-col gap-4 mt-8">
+        <button className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onClick={handleEdit}>
           Edit
         </button>
-        <button className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700" onClick={() => setShowConfirm(true)} disabled={deleting}>
+        <button className="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700" onClick={() => setShowConfirm(true)} disabled={deleting}>
           Delete
+        </button>
+        <button className="w-full bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800" onClick={() => navigate('/profile', { state: { tab: 'training' } })}>
+          Cancel
         </button>
       </div>
       {showConfirm && (

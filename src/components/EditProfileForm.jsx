@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { supabase } from '../../utils/supabaseClient';
+import { motion } from 'framer-motion';
 
 const BELT_OPTIONS = ['White', 'Blue', 'Purple', 'Brown', 'Black'];
 
 export default function EditProfileForm({ initialProfileData, user, onClose, onSuccess }) {
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
+  const [isExiting, setIsExiting] = useState(false);
   const {
     register,
     handleSubmit,
@@ -40,7 +42,10 @@ export default function EditProfileForm({ initialProfileData, user, onClose, onS
       const { error } = await supabase.from('profiles').update(filteredData).eq('id', user.id);
       if (error) throw error;
       setSubmitSuccess('Profile updated successfully!');
-      if (onSuccess) onSuccess();
+      setIsExiting(true); // trigger exit animation
+      setTimeout(() => {
+        if (onSuccess) onSuccess();
+      }, 300); // match animation duration
     } catch (err) {
       setSubmitError(err.message || 'Failed to update profile.');
     }
@@ -49,9 +54,25 @@ export default function EditProfileForm({ initialProfileData, user, onClose, onS
   // URL validation regex
   const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/\S*)?$/i;
 
+  const handleCancel = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      if (onClose) onClose();
+    }, 300); // match animation duration
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-black rounded-lg shadow-lg w-full max-w-lg p-8 relative text-white">
+      <motion.div
+        className="bg-black rounded-lg shadow-lg w-full max-w-lg p-8 relative text-white"
+        initial={{ opacity: 0, scale: 0.95 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        animate={isExiting ? { opacity: 0, scale: 0.95 } : { opacity: 1, scale: 1 }}
+        onAnimationComplete={() => {
+          if (isExiting && onClose) onClose();
+        }}
+      >
         <h2 className="text-2xl font-bold mb-4 text-center">Edit Profile</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
@@ -188,12 +209,12 @@ export default function EditProfileForm({ initialProfileData, user, onClose, onS
             <button type="submit" className="bg-white text-black px-6 py-2 rounded hover:bg-gray-200 disabled:opacity-50" disabled={isSubmitting}>
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
-            <button type="button" className="bg-gray-800 text-white px-6 py-2 rounded hover:bg-gray-700 border border-gray-600" onClick={onClose}>
+            <button type="button" className="bg-gray-800 text-white px-6 py-2 rounded hover:bg-gray-700 border border-gray-600" onClick={handleCancel}>
               Cancel
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }
