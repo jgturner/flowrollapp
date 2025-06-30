@@ -52,7 +52,7 @@ export default function RegisterForm() {
 
   if (!user) {
     return (
-      <div className="pt-20">
+      <div>
         <div className="xl:w-1/3 lg:w-2/3 sm:w-3/4 px-5 mx-auto mt-12">
           <div>
             <img src={logo} alt="logo" width="100" className="mx-auto mb-3" />

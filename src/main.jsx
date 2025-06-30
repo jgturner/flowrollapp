@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams, useLocation } from 'react-router-dom';
 import './index.css';
 import App from './App.jsx';
 import Technique from './Technique.jsx';
@@ -17,6 +17,12 @@ import TrainingForm from './pages/TrainingPage/TrainingForm.jsx';
 import SingleSession from './pages/TrainingPage/SingleSession.jsx';
 import GymsPage from './pages/GymsPage.jsx';
 import SingleGymPage from './pages/SingleGymPage.jsx';
+import Training from './pages/TrainingPage/Training.jsx';
+import Stats from './pages/TrainingPage/Stats.jsx';
+import ManageGymPage from './pages/ProfilePages/ManageGymPage.jsx';
+import MyVideos from './pages/ProfilePages/MyVideos.jsx';
+import PublicProfile from './pages/ProfilePages/PublicProfile.jsx';
+import EditProfile from './pages/ProfilePages/EditProfile.jsx';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -36,28 +42,35 @@ createRoot(document.getElementById('root')).render(
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/gyms" element={<GymsPage />} />
-            <Route path="/gym/:id" element={<SingleGymPage />} />
-            <Route index element={<App />} />
-            <Route path="technique/:id" element={<Technique />} />
-            <Route path="/playlist" element={<Playlist />} />
-            <Route path="/addTechnique" element={<AddTechnique />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/addTechnique/details/:uploadId" element={<TechniqueDetailsFormWrapper />} />
-            <Route path="/training/new" element={<TrainingForm />} />
-            <Route path="/training/:id" element={<SingleSession />} />
+          <Route element={<Layout />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Outlet />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="gyms" element={<GymsPage />} />
+              <Route path="training" element={<Training />} />
+              <Route path="stats" element={<Stats />} />
+              <Route path="gym/:id" element={<SingleGymPage />} />
+              <Route index element={<App />} />
+              <Route path="technique/:id" element={<Technique />} />
+              <Route path="playlist" element={<Playlist />} />
+              <Route path="addTechnique" element={<AddTechnique />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="manage-gym" element={<ManageGymPage />} />
+              <Route path="my-videos" element={<MyVideos />} />
+              <Route path="public-profile/:userId" element={<PublicProfile />} />
+              <Route path="edit-profile" element={<EditProfile />} />
+              <Route path="addTechnique/details/:uploadId" element={<TechniqueDetailsFormWrapper />} />
+              <Route path="training/new" element={<TrainingForm />} />
+              <Route path="training/:id" element={<SingleSession />} />
+            </Route>
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from './Avatar';
 import Reply from './Reply';
 import { FaReply, FaEdit, FaTrash } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 export default function Comment({ comment, onDelete }) {
   const { user } = useAuth();
@@ -125,11 +126,15 @@ export default function Comment({ comment, onDelete }) {
 
   return (
     <div className="flex items-start gap-1">
-      <Avatar url={comment.profile?.avatar_url} name={`${comment.profile?.first_name} ${comment.profile?.last_name}`} size={40} />
+      <Link to={comment.profile ? `/public-profile/${comment.profile.id}` : '#'} className="flex items-center">
+        <Avatar url={comment.profile?.avatar_url} name={`${comment.profile?.first_name} ${comment.profile?.last_name}`} size={40} />
+      </Link>
       <div className="flex-1">
         <div className="px-3">
           <div className="flex items-center justify-between">
-            <p className="font-semibold text-white pt-2">{`${comment.profile?.first_name} ${comment.profile?.last_name}`}</p>
+            <Link to={comment.profile ? `/public-profile/${comment.profile.id}` : '#'}>
+              <p className="font-semibold text-white pt-2">{`${comment.profile?.first_name} ${comment.profile?.last_name}`}</p>
+            </Link>
             {user?.id === comment.user_id && (
               <div className="flex items-center gap-3">
                 <button onClick={() => setIsEditing(!isEditing)} className="text-gray-400 hover:text-white">

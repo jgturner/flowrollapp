@@ -24,6 +24,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
     end_time: '',
     instructor: '',
     is_private: false,
+    is_open_mat: false,
   });
   const [editingScheduleIdx, setEditingScheduleIdx] = useState(null);
   const [hours, setHours] = useState(daysOfWeek.map((day, idx) => ({ day_of_week: idx, open_time: '', close_time: '' })));
@@ -144,7 +145,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
     } else {
       setFormData({ ...formData, schedule: [...formData.schedule, scheduleEntry] });
     }
-    setScheduleEntry({ class_name: '', day_of_week: 0, start_time: '', end_time: '', instructor: '', is_private: false });
+    setScheduleEntry({ class_name: '', day_of_week: 0, start_time: '', end_time: '', instructor: '', is_private: false, is_open_mat: false });
   };
   const editSchedule = (idx) => {
     setScheduleEntry(formData.schedule[idx]);
@@ -154,7 +155,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
     const updated = formData.schedule.filter((_, i) => i !== idx);
     setFormData({ ...formData, schedule: updated });
     setEditingScheduleIdx(null);
-    setScheduleEntry({ class_name: '', day_of_week: 0, start_time: '', end_time: '', instructor: '', is_private: false });
+    setScheduleEntry({ class_name: '', day_of_week: 0, start_time: '', end_time: '', instructor: '', is_private: false, is_open_mat: false });
   };
 
   // --- Hours Handlers ---
@@ -224,6 +225,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
           end_time: sched.end_time,
           instructor: sched.instructor,
           is_private: sched.is_private,
+          is_open_mat: sched.is_open_mat,
         });
       }
       // Insert new hours
@@ -324,26 +326,26 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
   const inactiveFollowers = followers.filter((f) => f.status === 'approved' && !f.active);
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg">
+    <div className="bg-black p-6 rounded-lg">
       {successMsg && <div className="bg-green-700 text-white p-3 mb-4 rounded text-center font-bold animate-pulse">{successMsg}</div>}
       {/* Step Navigation */}
-      <div className="flex justify-center gap-2 mb-6">
+      <div className="flex justify-center gap-2 mb-6 border-b border-gray-700">
         <button
-          className={`px-4 py-1 rounded font-semibold transition ${step === 1 ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+          className={`px-4 py-1 font-semibold transition border-b-2 ${step === 1 ? 'border-white text-white' : 'border-transparent text-white'}`}
           onClick={() => setStep(1)}
           type="button"
         >
           Gym Info
         </button>
         <button
-          className={`px-4 py-1 rounded font-semibold transition ${step === 2 ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+          className={`px-4 py-1 font-semibold transition border-b-2 ${step === 2 ? 'border-white text-white' : 'border-transparent text-white'}`}
           onClick={() => setStep(2)}
           type="button"
         >
           Schedule
         </button>
         <button
-          className={`px-4 py-1 rounded font-semibold transition ${step === 3 ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+          className={`px-4 py-1 font-semibold transition border-b-2 ${step === 3 ? 'border-white text-white' : 'border-transparent text-white'}`}
           onClick={() => setStep(3)}
           type="button"
         >
@@ -351,7 +353,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
         </button>
         {gym && (
           <button
-            className={`px-4 py-1 rounded font-semibold transition ${step === 4 ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            className={`px-4 py-1 font-semibold transition border-b-2 ${step === 4 ? 'border-white text-white' : 'border-transparent text-white'}`}
             onClick={() => setStep(4)}
             type="button"
           >
@@ -395,6 +397,10 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
               <input type="checkbox" name="is_private" checked={scheduleEntry.is_private} onChange={handleScheduleChange} className="mr-2" />
               Private Class
             </label>
+            <label className="text-white flex items-center mb-2">
+              <input type="checkbox" name="is_open_mat" checked={scheduleEntry.is_open_mat} onChange={handleScheduleChange} className="mr-2" />
+              Open Mat
+            </label>
             <button className="bg-blue-600 text-white px-4 py-2 rounded mr-2" onClick={addOrUpdateSchedule} type="button">
               {editingScheduleIdx !== null ? 'Update' : 'Add'} Class
             </button>
@@ -403,7 +409,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
                 className="bg-gray-600 text-white px-4 py-2 rounded"
                 onClick={() => {
                   setEditingScheduleIdx(null);
-                  setScheduleEntry({ class_name: '', day_of_week: 0, start_time: '', end_time: '', instructor: '', is_private: false });
+                  setScheduleEntry({ class_name: '', day_of_week: 0, start_time: '', end_time: '', instructor: '', is_private: false, is_open_mat: false });
                 }}
                 type="button"
               >
@@ -420,6 +426,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
                   <span>
                     <b>{sched.class_name}</b> - {daysOfWeek[sched.day_of_week]}, {sched.start_time} - {sched.end_time} ({sched.instructor}){' '}
                     {sched.is_private && <span className="text-yellow-400">[Private]</span>}
+                    {sched.is_open_mat && <span className="text-green-400 ml-2">[Open Mat]</span>}
                   </span>
                   <span>
                     <button className="text-blue-400 mr-2" onClick={() => editSchedule(idx)} type="button">
@@ -525,14 +532,14 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
       )}
       {/* Persistent Save Button */}
       <div className="mt-8 flex flex-col gap-2">
-        <button className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 transition" onClick={handleSave} type="button" disabled={saving}>
+        <button className="bg-black text-white border border-white px-4 py-2 rounded font-bold transition" onClick={handleSave} type="button" disabled={saving}>
           {saving ? 'Saving...' : 'Save Gym Profile'}
         </button>
       </div>
       {/* Delete Gym Button (below all tabs, inside main container) */}
       {gym && (
-        <div className="flex flex-col items-center mt-8">
-          <button className="w-full bg-red-700 text-white px-4 py-2 rounded font-bold hover:bg-red-800" onClick={handleDeleteGym} type="button" disabled={saving}>
+        <div className="flex flex-col items-center mt-3">
+          <button className="w-full bg-black text-white border border-white px-4 py-2 rounded font-bold" onClick={handleDeleteGym} type="button" disabled={saving}>
             Delete Gym
           </button>
         </div>

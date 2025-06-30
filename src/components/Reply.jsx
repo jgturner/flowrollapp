@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../utils/supabaseClient.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from './Avatar';
+import { Link } from 'react-router-dom';
 import { FaEdit, FaTrash } from 'react-icons/fa';
 
 export default function Reply({ reply, onDelete }) {
@@ -37,11 +38,15 @@ export default function Reply({ reply, onDelete }) {
 
   return (
     <div className="flex items-start gap-1">
-      <Avatar url={reply.profile?.avatar_url} name={`${reply.profile?.first_name} ${reply.profile?.last_name}`} size={40} />
+      <Link to={reply.profile ? `/public-profile/${reply.profile.id}` : '#'} className="flex items-center">
+        <Avatar url={reply.profile?.avatar_url} name={`${reply.profile?.first_name} ${reply.profile?.last_name}`} size={40} />
+      </Link>
       <div className="flex-1">
         <div className=" rounded-lg p-2">
           <div className="flex items-center justify-between">
-            <p className="font-semibold text-white text-sm">{`${reply.profile?.first_name} ${reply.profile?.last_name}`}</p>
+            <Link to={reply.profile ? `/public-profile/${reply.profile.id}` : '#'}>
+              <p className="font-semibold text-white text-sm">{`${reply.profile?.first_name} ${reply.profile?.last_name}`}</p>
+            </Link>
             {user?.id === reply.user_id && (
               <div className="flex items-center gap-2">
                 <button onClick={() => setIsEditing(!isEditing)} className="text-gray-400 hover:text-white">

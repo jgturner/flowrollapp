@@ -11,23 +11,17 @@ import { RiVideoUploadLine } from 'react-icons/ri';
 import { SiInstagram, SiFacebook, SiTiktok } from 'react-icons/si';
 import { FaLink, FaTwitter, FaYoutube } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
-import EditProfileForm from '../../components/EditProfileForm';
-import { AnimatePresence, motion } from 'framer-motion';
+// import EditProfileForm from '../../components/EditProfileForm';
+import { AnimatePresence } from 'framer-motion';
 import GymProfileForm from '../../components/GymProfileForm';
-
-// Placeholder imports for new components
-// import TrainingStats from '../../components/TrainingStats';
 // import TrainingHistory from '../../components/TrainingHistory';
 
 export default function Profile() {
-  const { user, loading, refreshUser, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [profileData, setProfileData] = useState(null);
   const [isUploaderOpen, setUploaderOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
-  const [techniques, setTechniques] = useState([]);
-  const [activeTab, setActiveTab] = useState('videos');
   const navigate = useNavigate();
-  const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [userGym, setUserGym] = useState(null);
   const [userGymName, setUserGymName] = useState(null);
   const [userGymId, setUserGymId] = useState(null);
@@ -105,12 +99,10 @@ export default function Profile() {
 
     async function fetchTechniques() {
       if (user) {
-        const { data, error } = await supabase.from('techniques').select('*').eq('user_id', user.id);
+        const { error } = await supabase.from('techniques').select('*').eq('user_id', user.id);
 
         if (error) {
           console.error('Error fetching techniques:', error);
-        } else {
-          setTechniques(data);
         }
       }
     }
@@ -164,22 +156,6 @@ export default function Profile() {
   return (
     <div className="pt-2">
       <div className=" mx-auto">
-        {/* Edit Profile Button */}
-
-        <AnimatePresence>
-          {isEditModalOpen && (
-            <EditProfileForm
-              key="edit-profile-modal"
-              initialProfileData={profileData}
-              user={user}
-              onClose={() => setEditModalOpen(false)}
-              onSuccess={async () => {
-                setEditModalOpen(false);
-                await refreshUser();
-              }}
-            />
-          )}
-        </AnimatePresence>
         {profileData ? (
           <div>
             <div className="flex md:justify-between justify-center flex-wrap">
@@ -258,165 +234,40 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-
-              <div className="w-full md:w-1/6">
-                {profileData && user && user.id === profileData.user_id && (
-                  <div className="flex justify-center mb-6">
-                    <button
-                      className="border border-white text-sm text-white px-3 py-1 rounded hover:bg-white hover:text-black w-full"
-                      onClick={() => setEditModalOpen(true)}
-                    >
-                      Edit Profile
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         ) : (
           <p className="text-center">Could not load profile information.</p>
         )}
       </div>
-      {/* Tabs */}
-      <hr className="border-white" />
-      <div className="flex justify-center">
-        <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none ml-2 text-white`} onClick={() => setActiveTab('training')}>
-          <MdFitnessCenter size={22} />
-        </button>
-        <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none text-white`} onClick={() => setActiveTab('stats')}>
-          <MdOutlineQueryStats size={22} />
-        </button>
-        <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none text-white`} onClick={() => setActiveTab('videos')}>
-          <RiVideoUploadLine size={22} className="mr-2" />
-        </button>
-        {userGym && (
-          <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none text-white`} onClick={() => setActiveTab('gym')} title="Manage Gym">
-            <MdHome size={22} />
-          </button>
-        )}
-        <button className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none text-white`} onClick={() => setActiveTab('settings')}>
-          <MdSettings size={22} />
-        </button>
-      </div>
-      <hr className="border-white" />
       {/* Tab Content */}
-      <div className="mt-6" style={{ minHeight: 300 }}>
-        <AnimatePresence mode="wait" initial={false}>
-          {activeTab === 'videos' && (
-            <motion.div
-              key="videos"
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 40 }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
-            >
-              <h4 className="text-xl font-bold ">Video Uploads</h4>
-              {techniques.length > 0 ? (
-                <div className="grid md:grid-cols-3 grid-cols-2 gap-4 mt-8">
-                  {techniques.map((tech) => (
-                    <Link to={`/technique/${tech.id}`} key={tech.id} className="block">
-                      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                        <img
-                          src={`https://image.mux.com/${tech.mux_playback_id}/thumbnail.jpg?width=320${
-                            tech.thumbnail_time !== undefined && tech.thumbnail_time !== null ? `&time=${tech.thumbnail_time}` : ''
-                          }`}
-                          alt={tech.title || 'Video thumbnail'}
-                          className="absolute top-0 left-0 w-full h-full object-cover rounded"
-                        />
-                      </div>
-                      <div className="mt-2">
-                        <div className="font-semibold text-sm text-white truncate">{tech.title}</div>
-                        <div className="text-xs text-gray-500">{tech.position}</div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center mt-4">No techniques uploaded yet.</p>
-              )}
-            </motion.div>
+      <div className="mt-6" style={{ minHeight: 200 }}>
+        <h4 className="text-xl font-bold mb-4">Management</h4>
+        <div className="flex flex-col gap-4">
+          {profileData && user && user.id === profileData.user_id && (
+            <Link to="/edit-profile">
+              <button className="w-full bg-black text-white px-4 py-2 rounded hover:bg-neutral-800 font-semibold border border-white">Edit Profile</button>
+            </Link>
           )}
-          {activeTab === 'training' && (
-            <motion.div
-              key="training"
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 40 }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h4 className="text-xl font-bold">Training</h4>
-                <button className="border border-white text-white px-4 py-1 rounded hover:bg-white hover:text-black" onClick={() => navigate('/training/new')}>
-                  + Log Session
-                </button>
-              </div>
-              <TrainingHistory userId={user.id} />
-            </motion.div>
-          )}
-          {activeTab === 'stats' && (
-            <motion.div
-              key="stats"
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 40 }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
-            >
-              <h4 className="text-xl font-bold mb-4">Stats</h4>
-              {/* Add your stats content here, or reuse <TrainingStats userId={user.id} /> if appropriate */}
-              <TrainingStats userId={user.id} />
-            </motion.div>
-          )}
-          {activeTab === 'gym' && (
-            <motion.div
-              key="gym"
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 40 }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
-            >
-              <GymProfileForm
-                gym={userGym}
-                user={user}
-                onSave={async () => {
-                  // Refresh gym state after save
-                  if (user) {
-                    const { data, error } = await supabase.from('gyms').select('*').eq('owner_user_id', user.id).single();
-                    if (!error && data) setUserGym(data);
-                  }
-                }}
-                onDelete={() => {
-                  setUserGym(null);
-                  setActiveTab('videos');
-                }}
-              />
-            </motion.div>
-          )}
-          {activeTab === 'settings' && (
-            <motion.div
-              key="settings"
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 40 }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
-            >
-              <h4 className="text-xl font-bold mb-4">Settings</h4>
-              {!userGym && (
-                <button className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-semibold mb-6" onClick={() => setActiveTab('gym')}>
-                  Create Gym Profile
-                </button>
-              )}
-              <button
-                className="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-semibold mt-6"
-                onClick={async () => {
-                  await logout();
-                  navigate('/login', { replace: true });
-                }}
-              >
-                Log Out
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          <Link to="/manage-gym">
+            <button className="w-full bg-black text-white px-4 py-2 rounded hover:bg-neutral-800 font-semibold border border-white">Manage Gym</button>
+          </Link>
+          <Link to="/my-videos">
+            <button className="w-full bg-black text-white px-4 py-2 rounded hover:bg-neutral-800 font-semibold border border-white">Manage Videos</button>
+          </Link>
+          <Link to={`/public-profile/${user?.id}`}>
+            <button className="w-full bg-black text-white px-4 py-2 rounded hover:bg-neutral-800 font-semibold border border-white">View Public Profile</button>
+          </Link>
+          <button
+            className="w-full bg-black text-white px-4 py-2 rounded hover:bg-neutral-800 font-semibold border border-white"
+            onClick={async () => {
+              await logout();
+              navigate('/login', { replace: true });
+            }}
+          >
+            Log Out
+          </button>
+        </div>
       </div>
       <ProfileImageUploader isOpen={isUploaderOpen} onRequestClose={() => setUploaderOpen(false)} onUploadComplete={handleUploadComplete} />
     </div>

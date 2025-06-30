@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient.js';
 import MuxPlayer from '@mux/mux-player-react';
 import { FaRegHeart, FaHeart, FaEdit } from 'react-icons/fa';
@@ -11,7 +11,7 @@ import Avatar from './components/Avatar.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 import Comments from './components/Comments.jsx';
 import DescriptionRenderer from './components/DescriptionRenderer.jsx';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 
 export default function Technique() {
   const { id } = useParams();
@@ -34,6 +34,8 @@ export default function Technique() {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const descRef = useRef(null);
   const [descHeight, setDescHeight] = useState({ collapsed: 0, expanded: 0 });
+  const [userGymName, setUserGymName] = useState(null);
+  const [userGymId, setUserGymId] = useState(null);
 
   const guardOptions = [
     'Standing',
@@ -119,11 +121,39 @@ export default function Technique() {
         setPublicUrl(bustedUrl);
       }
 
-      // Step 4: Combine the data and update the state
+      // Step 4: Fetch gym info for the user (owner or active follower)
+      let gymId = null;
+      let gymName = null;
+      if (techData.user_id) {
+        // Check if user owns a gym
+        const { data: ownedGym, error: ownerError } = await supabase.from('gyms').select('id, name').eq('owner_user_id', techData.user_id).single();
+        if (!ownerError && ownedGym) {
+          gymId = ownedGym.id;
+          gymName = ownedGym.name;
+        } else {
+          // Fallback to follower
+          const { data: follower } = await supabase
+            .from('gym_followers')
+            .select('gym_id')
+            .eq('user_id', techData.user_id)
+            .eq('status', 'approved')
+            .eq('active', true)
+            .single();
+          if (follower && follower.gym_id) {
+            gymId = follower.gym_id;
+            const { data: gym, error: gymError } = await supabase.from('gyms').select('name').eq('id', follower.gym_id).single();
+            if (!gymError && gym) gymName = gym.name;
+          }
+        }
+      }
+      setUserGymId(gymId);
+      setUserGymName(gymName);
+
+      // Step 5: Combine the data and update the state
       setTechnique({ ...techData, profile: profileData });
       setLoading(false);
 
-      // Step 5: Subscribe to profile updates
+      // Step 6: Subscribe to profile updates
       if (profileData) {
         channel = supabase
           .channel(`profile-updates-for-technique-${id}`)
@@ -383,6 +413,24 @@ export default function Technique() {
 
   const isOwner = user && user.id === technique.user_id;
 
+  // Add getBeltClass helper for belt styling
+  function getBeltClass(beltLevel) {
+    switch ((beltLevel || '').toLowerCase()) {
+      case 'white':
+        return 'bg-white text-black border-black';
+      case 'blue':
+        return 'bg-blue-600 text-white border-blue-600';
+      case 'purple':
+        return 'bg-purple-700 text-white border-purple-700';
+      case 'brown':
+        return 'bg-yellow-900 text-white border-yellow-900';
+      case 'black':
+        return 'bg-black text-red-600 border-red-600';
+      default:
+        return 'bg-black text-white border-white';
+    }
+  }
+
   return (
     <div>
       <div className="md:w-3/4 w-full">
@@ -510,13 +558,26 @@ export default function Technique() {
               </div>
               <div className="flex items-center gap-3 mb-4 justify-between">
                 <div className="flex items-center gap-3 mb-4 ">
-                  <Avatar url={publicUrl} name={technique.profile ? `${technique.profile.first_name} ${technique.profile.last_name}` : 'Anonymous'} size={60} />
-                  <div>
-                    {/* <p className="text-xs mb-[-5px] pb-0">"The King"</p> */}
-                    <h1 className="text-white mt-0 pt-0 mb-1">{technique.profile ? `${technique.profile.first_name} ${technique.profile.last_name}` : 'Gordon Ryan'}</h1>
-                    {/* <hr className="border-gray-700 mb-2" /> */}
-                    {/* <p className="text-xs mt-[-5px] pb-0">10th Planet Jiu Jitsu</p> */}
-                  </div>
+                  <Link to={technique.profile ? `/public-profile/${technique.profile.id}` : '#'} className="flex items-center gap-3">
+                    <Avatar url={publicUrl} name={technique.profile ? `${technique.profile.first_name} ${technique.profile.last_name}` : 'Anonymous'} size={80} />
+                    <div>
+                      <h1 className="text-white mt-0 pt-0 mb-0">
+                        {technique.profile ? `${technique.profile.first_name} ${technique.profile.last_name}` : 'Gordon Ryan'}
+                      </h1>
+                      {/* GYM NAME */}
+                      {userGymName && userGymId ? (
+                        <Link to={`/gym/${userGymId}`} className="text-base font-semibold text-blue-400 mt-1 hover:underline">
+                          {userGymName}
+                        </Link>
+                      ) : null}
+                      {/* BELT */}
+                      {technique.profile && technique.profile.belt_level && (
+                        <p className={`text-sm mb-0 border-2 rounded-md px-2 py-0.5 text-center mt-1 ${getBeltClass(technique.profile.belt_level)}`}>
+                          {technique.profile.belt_level}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
                 </div>
 
                 {/* <div className="flex items-center gap-12">
@@ -549,15 +610,17 @@ export default function Technique() {
               <hr className="border-gray-700 mt-2 mb-4" />
 
               <div className="text-white mb-4">
-                <motion.div
-                  animate={{ height: showFullDescription ? descHeight.expanded : descHeight.collapsed }}
-                  style={{ overflow: 'hidden' }}
-                  transition={{ duration: 0.35, ease: 'easeInOut' }}
-                >
-                  <div ref={descRef} className={showFullDescription ? '' : 'line-clamp-3'}>
-                    <DescriptionRenderer text={technique.description} />
+                <AnimatePresence>
+                  <div
+                    animate={{ height: showFullDescription ? descHeight.expanded : descHeight.collapsed }}
+                    style={{ overflow: 'hidden' }}
+                    transition={{ duration: 0.35, ease: 'easeInOut' }}
+                  >
+                    <div ref={descRef} className={showFullDescription ? '' : 'line-clamp-3'}>
+                      <DescriptionRenderer text={technique.description} />
+                    </div>
                   </div>
-                </motion.div>
+                </AnimatePresence>
                 {technique.description && technique.description.split(/\r?\n|<br\s*\/?>(?=\s*\S)/gi).length > 3 && (
                   <button className="mt-2 text-blue-400 hover:text-blue-500 text-sm focus:outline-none" onClick={() => setShowFullDescription((prev) => !prev)}>
                     {showFullDescription ? 'Show less' : 'Show more'}
