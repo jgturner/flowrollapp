@@ -19,7 +19,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
   const [successMsg, setSuccessMsg] = useState('');
   const [scheduleEntry, setScheduleEntry] = useState({
     class_name: '',
-    day_of_week: 0,
+    days_of_week: [],
     start_time: '',
     end_time: '',
     instructor: '',
@@ -27,40 +27,48 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
     is_open_mat: false,
   });
   const [editingScheduleIdx, setEditingScheduleIdx] = useState(null);
-  const [hours, setHours] = useState(daysOfWeek.map((day, idx) => ({ day_of_week: idx, open_time: '', close_time: '' })));
+  const [hours, setHours] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [followersLoading, setFollowersLoading] = useState(false);
   const [followersError, setFollowersError] = useState('');
+  const [followerSearch, setFollowerSearch] = useState('');
   const navigate = useNavigate();
 
-  // Load existing schedule and hours if editing a gym
   useEffect(() => {
-    async function fetchGymData() {
+    async function fetchAllGymData() {
       if (gym && gym.id) {
+        setFormData({
+          name: gym.name || '',
+          address: gym.address || '',
+          photo: gym.photo_url || '',
+          schedule: [],
+          hours: [],
+        });
         // Fetch schedule
-        const { data: scheduleData, error: scheduleError } = await supabase
-          .from('gym_schedules')
-          .select('*')
-          .eq('gym_id', gym.id)
-          .order('day_of_week', { ascending: true });
+        const { data: scheduleData, error: scheduleError } = await supabase.from('gym_schedules').select('*').eq('gym_id', gym.id);
         // Fetch hours
         const { data: hoursData, error: hoursError } = await supabase.from('gym_hours').select('*').eq('gym_id', gym.id).order('day_of_week', { ascending: true });
         if (!scheduleError && scheduleData) {
           setFormData((prev) => ({ ...prev, schedule: scheduleData }));
         }
         if (!hoursError && hoursData) {
-          // Fill in all 7 days, even if some are missing
           const hoursArr = daysOfWeek.map((_, idx) => {
             const found = hoursData.find((h) => h.day_of_week === idx);
-            return found ? { day_of_week: idx, open_time: found.open_time, close_time: found.close_time } : { day_of_week: idx, open_time: '', close_time: '' };
+            return found
+              ? {
+                  day_of_week: idx,
+                  open_time: found.closed && (found.closed === true || found.closed === 'true' || found.closed === 1) ? '' : found.open_time,
+                  close_time: found.closed && (found.closed === true || found.closed === 'true' || found.closed === 1) ? '' : found.close_time,
+                  closed: Boolean(found && (found.closed === true || found.closed === 'true' || found.closed === 1)),
+                }
+              : { day_of_week: idx, open_time: '', close_time: '', closed: false };
           });
           setHours(hoursArr);
         }
       }
     }
-    fetchGymData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gym?.id]);
+    fetchAllGymData();
+  }, [gym]);
 
   // Fetch followers when Followers tab is selected
   useEffect(() => {
@@ -71,12 +79,23 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
         // Get all followers for this gym
         const { data, error } = await supabase
           .from('gym_followers')
-          .select('id, user_id, status, active, profiles: user_id (id, first_name, last_name, avatar_url)')
+          .select('id, user_id, status, active, profiles: user_id (id, first_name, last_name, avatar_url, belt_verified, belt_verified_by)')
           .eq('gym_id', gym.id);
         if (error) {
           setFollowersError('Failed to load followers');
           setFollowers([]);
         } else {
+          // Fetch belt_level for each user_id
+          const userIds = (data || []).map((f) => f.user_id);
+          let beltLevels = {};
+          if (userIds.length > 0) {
+            const { data: profilesData } = await supabase.from('profiles').select('id, belt_level').in('id', userIds);
+            if (profilesData) {
+              profilesData.forEach((p) => {
+                beltLevels[p.id] = p.belt_level;
+              });
+            }
+          }
           // Map avatar_url to public URL if present
           const followersWithAvatars = await Promise.all(
             (data || []).map(async (f) => {
@@ -90,6 +109,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
                 profiles: {
                   ...f.profiles,
                   avatar_url: avatarUrl || '/default-avatar.png',
+                  belt_level: beltLevels[f.user_id] || null,
                 },
               };
             })
@@ -131,10 +151,18 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
   // --- Schedule Handlers ---
   const handleScheduleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setScheduleEntry({
-      ...scheduleEntry,
-      [name]: type === 'checkbox' ? checked : value,
-    });
+    if (name === 'days_of_week') {
+      const day = parseInt(value, 10);
+      setScheduleEntry((prev) => ({
+        ...prev,
+        days_of_week: checked ? [...prev.days_of_week, day] : prev.days_of_week.filter((d) => d !== day),
+      }));
+    } else {
+      setScheduleEntry({
+        ...scheduleEntry,
+        [name]: type === 'checkbox' ? checked : value,
+      });
+    }
   };
   const addOrUpdateSchedule = () => {
     if (editingScheduleIdx !== null) {
@@ -145,7 +173,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
     } else {
       setFormData({ ...formData, schedule: [...formData.schedule, scheduleEntry] });
     }
-    setScheduleEntry({ class_name: '', day_of_week: 0, start_time: '', end_time: '', instructor: '', is_private: false, is_open_mat: false });
+    setScheduleEntry({ class_name: '', days_of_week: [], start_time: '', end_time: '', instructor: '', is_private: false, is_open_mat: false });
   };
   const editSchedule = (idx) => {
     setScheduleEntry(formData.schedule[idx]);
@@ -155,13 +183,21 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
     const updated = formData.schedule.filter((_, i) => i !== idx);
     setFormData({ ...formData, schedule: updated });
     setEditingScheduleIdx(null);
-    setScheduleEntry({ class_name: '', day_of_week: 0, start_time: '', end_time: '', instructor: '', is_private: false, is_open_mat: false });
+    setScheduleEntry({ class_name: '', days_of_week: [], start_time: '', end_time: '', instructor: '', is_private: false, is_open_mat: false });
   };
 
   // --- Hours Handlers ---
   const handleHoursChange = (idx, field, value) => {
     const updated = [...hours];
-    updated[idx][field] = value;
+    if (field === 'closed') {
+      updated[idx].closed = value;
+      if (value) {
+        updated[idx].open_time = '';
+        updated[idx].close_time = '';
+      }
+    } else {
+      updated[idx][field] = value;
+    }
     setHours(updated);
   };
 
@@ -169,11 +205,12 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
   const handleSave = async () => {
     if (saving) return; // Prevent double submission
     setSaving(true);
-    // Insert or update gym
+
+    // 1. Save or update gym
     let gymId = gym?.id;
     let result;
     let created = false;
-    console.log('Saving gym with photo URL:', formData.photo);
+
     if (gym) {
       result = await supabase
         .from('gyms')
@@ -203,43 +240,97 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
         created = true;
       }
     }
-    if (result.error) {
-      alert('Error saving gym: ' + result.error.message);
+
+    if (result.error || !gymId) {
+      alert('Error saving gym: ' + (result.error?.message || 'Unknown error'));
       setSaving(false);
       return;
     }
-    // Upsert schedule
-    if (gymId) {
-      // Delete old schedules/hours if editing
-      if (gym) {
-        await supabase.from('gym_schedules').delete().eq('gym_id', gymId);
-        await supabase.from('gym_hours').delete().eq('gym_id', gymId);
-      }
-      // Insert new schedules
-      for (const sched of formData.schedule) {
-        await supabase.from('gym_schedules').insert({
+
+    // 2. Delete old schedules/hours if editing
+    if (gym) {
+      await supabase.from('gym_schedules').delete().eq('gym_id', gymId);
+      await supabase.from('gym_hours').delete().eq('gym_id', gymId);
+    }
+
+    // 3. Insert new schedules
+    for (const sched of formData.schedule) {
+      try {
+        if (!sched.class_name || !sched.start_time || !sched.end_time || !sched.instructor) {
+          alert('Please fill out all required fields for each class.');
+          setSaving(false);
+          return;
+        }
+        const daysArr = Array.isArray(sched.days_of_week) ? sched.days_of_week.map((d) => parseInt(d, 10)).filter((d) => !isNaN(d)) : [];
+        if (daysArr.length === 0) {
+          alert('Please select at least one day of the week for each class.');
+          setSaving(false);
+          return;
+        }
+        const schedulePayload = {
           gym_id: gymId,
           class_name: sched.class_name,
-          day_of_week: Number(sched.day_of_week),
+          days_of_week: daysArr,
           start_time: sched.start_time,
           end_time: sched.end_time,
           instructor: sched.instructor,
-          is_private: sched.is_private,
-          is_open_mat: sched.is_open_mat,
-        });
-      }
-      // Insert new hours
-      for (const h of hours) {
-        if (h.open_time && h.close_time) {
-          await supabase.from('gym_hours').insert({
-            gym_id: gymId,
-            day_of_week: h.day_of_week,
-            open_time: h.open_time,
-            close_time: h.close_time,
-          });
+          is_private: !!sched.is_private,
+          is_open_mat: !!sched.is_open_mat,
+        };
+        const { error: scheduleInsertError } = await supabase.from('gym_schedules').insert(schedulePayload);
+        if (scheduleInsertError) {
+          alert('Error saving schedule: ' + scheduleInsertError.message);
+          setSaving(false);
+          return;
         }
+      } catch (err) {
+        alert('Unexpected error saving schedule: ' + err.message);
+        setSaving(false);
+        return;
       }
     }
+
+    // 4. Insert new hours (save all 7 days, even if closed or empty)
+    // Always delete all previous hours for this gym before inserting new ones
+    await supabase.from('gym_hours').delete().eq('gym_id', gymId);
+    for (let idx = 0; idx < 7; idx++) {
+      const h = hours[idx] || { day_of_week: idx, open_time: '', close_time: '', closed: false };
+      let hoursPayload;
+      if (h.closed) {
+        hoursPayload = {
+          gym_id: gymId,
+          day_of_week: idx,
+          closed: true,
+          open_time: null,
+          close_time: null,
+        };
+      } else if (h.open_time && h.close_time) {
+        hoursPayload = {
+          gym_id: gymId,
+          day_of_week: idx,
+          open_time: h.open_time,
+          close_time: h.close_time,
+          closed: false,
+        };
+      } else {
+        // Save as open but with empty times
+        hoursPayload = {
+          gym_id: gymId,
+          day_of_week: idx,
+          open_time: null,
+          close_time: null,
+          closed: false,
+        };
+      }
+      const { error: hoursInsertError } = await supabase.from('gym_hours').insert(hoursPayload);
+      if (hoursInsertError) {
+        alert('Error saving hours: ' + hoursInsertError.message);
+        setSaving(false);
+        return;
+      }
+    }
+
+    // 5. Success
     setSaving(false);
     setSuccessMsg(created ? 'Gym created!' : 'Gym updated!');
     setTimeout(() => {
@@ -320,13 +411,57 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
     setFollowers((prev) => prev.map((f) => (f.id === follower.id ? { ...f, active: makeActive } : f)));
   }
 
+  // Add handler for toggling belt verification
+  async function handleToggleBeltVerified(follower, checked) {
+    console.log('Checkbox toggled', follower, checked);
+    console.log('Updating user_id:', follower.user_id);
+    console.log('Current user (belt_verified_by):', user?.id);
+
+    const updateObj = checked ? { belt_verified: true, belt_verified_by: user?.id } : { belt_verified: false, belt_verified_by: null };
+    console.log('Update object:', updateObj);
+
+    const { data, error } = await supabase.from('profiles').update(updateObj).eq('id', follower.user_id);
+    console.log('Supabase update result:', { data, error });
+
+    if (error) {
+      alert('Failed to update belt verification: ' + error.message);
+      console.error('Database update error:', error);
+      return;
+    }
+
+    console.log('Database update successful');
+
+    // Update state immediately
+    setFollowers((prev) =>
+      prev.map((f) =>
+        f.id === follower.id
+          ? {
+              ...f,
+              profiles: {
+                ...f.profiles,
+                belt_verified: checked,
+                belt_verified_by: checked ? user?.id : null,
+              },
+            }
+          : f
+      )
+    );
+  }
+
   // Split followers into lists
   const pendingFollowers = followers.filter((f) => f.status === 'pending');
   const activeFollowers = followers.filter((f) => f.status === 'approved' && f.active);
   const inactiveFollowers = followers.filter((f) => f.status === 'approved' && !f.active);
 
+  // Filter followers by search query (case-insensitive, matches first or last name)
+  const filterFollowers = (list) =>
+    list.filter((f) => {
+      const name = `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.toLowerCase();
+      return name.includes(followerSearch.toLowerCase());
+    });
+
   return (
-    <div className="bg-black p-6 rounded-lg">
+    <div className="bg-black  rounded-lg">
       {successMsg && <div className="bg-green-700 text-white p-3 mb-4 rounded text-center font-bold animate-pulse">{successMsg}</div>}
       {/* Step Navigation */}
       <div className="flex justify-center gap-2 mb-6 border-b border-gray-700">
@@ -365,11 +500,13 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
       {step === 1 && (
         <div>
           <h2 className="text-xl font-bold mb-4 text-white">Gym Info</h2>
-          <input className="w-full mb-3 p-2 rounded" name="name" placeholder="Gym Name" value={formData.name} onChange={handleChange} />
-          <input className="w-full mb-3 p-2 rounded" name="address" placeholder="Gym Address" value={formData.address} onChange={handleChange} />
+          <label className="block text-white font-bold mb-1">Gym Name</label>
+          <input className="w-full mb-3 p-2 rounded border border-white" name="name" placeholder="Gym Name" value={formData.name} onChange={handleChange} />
+          <label className="block text-white font-bold mb-1">Gym Address</label>
+          <input className="w-full mb-3 p-2 rounded border border-white" name="address" placeholder="Gym Address" value={formData.address} onChange={handleChange} />
           <div className="mb-3">
-            <label className="block text-white mb-1">Gym Photo</label>
-            <input type="file" name="photo" className="w-full" onChange={handlePhotoChange} disabled={uploading} />
+            <label className="block text-white font-bold mb-1">Gym Photo</label>
+            <input type="file" name="photo" className="w-full border border-white mb-3 p-2 rounded" onChange={handlePhotoChange} disabled={uploading} />
             {uploading && <div className="text-blue-400 mt-1">Uploading...</div>}
             {uploadError && <div className="text-red-400 mt-1">{uploadError}</div>}
             {formData.photo && <img src={formData.photo} alt="Gym" className="mt-2 rounded w-40 h-40 object-cover" />}
@@ -380,27 +517,71 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
         <div>
           <h2 className="text-xl font-bold mb-4 text-white">BJJ Class Schedule</h2>
           <div className="mb-4">
-            <input className="w-full mb-2 p-2 rounded" name="class_name" placeholder="Class Name" value={scheduleEntry.class_name} onChange={handleScheduleChange} />
-            <select className="w-full mb-2 p-2 rounded" name="day_of_week" value={scheduleEntry.day_of_week} onChange={handleScheduleChange}>
+            <label className="block text-white font-bold mb-1">Class Name</label>
+            <input
+              className="w-full mb-3 p-2 rounded border border-white"
+              name="class_name"
+              placeholder="Class Name"
+              value={scheduleEntry.class_name}
+              onChange={handleScheduleChange}
+            />
+            <label className="block text-white font-bold mb-1">Days of Week</label>
+            <div className="flex flex-wrap gap-2 mb-3">
               {daysOfWeek.map((d, idx) => (
-                <option value={idx} key={d}>
+                <label key={d} className="text-white flex items-center font-normal">
+                  <input
+                    type="checkbox"
+                    name="days_of_week"
+                    value={idx}
+                    checked={scheduleEntry.days_of_week.includes(idx)}
+                    onChange={handleScheduleChange}
+                    className="mr-1"
+                  />
                   {d}
-                </option>
+                </label>
               ))}
-            </select>
-            <div className="flex gap-2 mb-2">
-              <input className="flex-1 p-2 rounded" name="start_time" type="time" value={scheduleEntry.start_time} onChange={handleScheduleChange} />
-              <input className="flex-1 p-2 rounded" name="end_time" type="time" value={scheduleEntry.end_time} onChange={handleScheduleChange} />
             </div>
-            <input className="w-full mb-2 p-2 rounded" name="instructor" placeholder="Instructor" value={scheduleEntry.instructor} onChange={handleScheduleChange} />
-            <label className="text-white flex items-center mb-2">
-              <input type="checkbox" name="is_private" checked={scheduleEntry.is_private} onChange={handleScheduleChange} className="mr-2" />
-              Private Class
-            </label>
-            <label className="text-white flex items-center mb-2">
-              <input type="checkbox" name="is_open_mat" checked={scheduleEntry.is_open_mat} onChange={handleScheduleChange} className="mr-2" />
-              Open Mat
-            </label>
+            <div className="flex gap-2 mb-3">
+              <div className="flex-1">
+                <label className="block text-white font-bold mb-1">Start Time</label>
+                <input
+                  className="w-full mb-3 p-2 rounded border border-white"
+                  name="start_time"
+                  type="time"
+                  value={scheduleEntry.start_time}
+                  onChange={handleScheduleChange}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-white font-bold mb-1">End Time</label>
+                <input
+                  className="w-full mb-3 p-2 rounded border border-white"
+                  name="end_time"
+                  type="time"
+                  value={scheduleEntry.end_time}
+                  onChange={handleScheduleChange}
+                />
+              </div>
+            </div>
+            <label className="block text-white font-bold mb-1">Instructor</label>
+            <input
+              className="w-full mb-3 p-2 rounded border border-white"
+              name="instructor"
+              placeholder="Instructor"
+              value={scheduleEntry.instructor}
+              onChange={handleScheduleChange}
+            />
+            <label className="block text-white font-bold mb-1">Options</label>
+            <div className="flex gap-4 mb-3">
+              <label className="text-white flex items-center font-normal">
+                <input type="checkbox" name="is_private" checked={scheduleEntry.is_private} onChange={handleScheduleChange} className="mr-2" />
+                Private Class
+              </label>
+              <label className="text-white flex items-center font-normal">
+                <input type="checkbox" name="is_open_mat" checked={scheduleEntry.is_open_mat} onChange={handleScheduleChange} className="mr-2" />
+                Open Mat
+              </label>
+            </div>
             <button className="bg-blue-600 text-white px-4 py-2 rounded mr-2" onClick={addOrUpdateSchedule} type="button">
               {editingScheduleIdx !== null ? 'Update' : 'Add'} Class
             </button>
@@ -409,7 +590,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
                 className="bg-gray-600 text-white px-4 py-2 rounded"
                 onClick={() => {
                   setEditingScheduleIdx(null);
-                  setScheduleEntry({ class_name: '', day_of_week: 0, start_time: '', end_time: '', instructor: '', is_private: false, is_open_mat: false });
+                  setScheduleEntry({ class_name: '', days_of_week: [], start_time: '', end_time: '', instructor: '', is_private: false, is_open_mat: false });
                 }}
                 type="button"
               >
@@ -424,7 +605,7 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
               {formData.schedule.map((sched, idx) => (
                 <li key={idx} className="mb-2 bg-gray-700 p-2 rounded flex justify-between items-center">
                   <span>
-                    <b>{sched.class_name}</b> - {daysOfWeek[sched.day_of_week]}, {sched.start_time} - {sched.end_time} ({sched.instructor}){' '}
+                    <b>{sched.class_name}</b> - {sched.days_of_week.map((d) => daysOfWeek[d]).join(', ')}, {sched.start_time} - {sched.end_time} ({sched.instructor}){' '}
                     {sched.is_private && <span className="text-yellow-400">[Private]</span>}
                     {sched.is_open_mat && <span className="text-green-400 ml-2">[Open Mat]</span>}
                   </span>
@@ -445,13 +626,42 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
       {step === 3 && (
         <div>
           <h2 className="text-xl font-bold mb-4 text-white">Hours of Operation</h2>
+
           <div className="mb-4">
             {daysOfWeek.map((day, idx) => (
-              <div key={day} className="flex items-center mb-2">
-                <span className="w-24 text-white">{day}</span>
-                <input className="p-2 rounded mr-2" type="time" value={hours[idx].open_time} onChange={(e) => handleHoursChange(idx, 'open_time', e.target.value)} />
-                <span className="text-white mx-1">-</span>
-                <input className="p-2 rounded mr-2" type="time" value={hours[idx].close_time} onChange={(e) => handleHoursChange(idx, 'close_time', e.target.value)} />
+              <div key={day} className="flex items-center mb-3">
+                <span className="w-24 text-white font-bold">{day}</span>
+                {hours[idx].closed ? (
+                  <div className="flex-1 mr-2">
+                    <span className="font-bold text-white">Closed</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-1 mr-2">
+                      <label className="block text-white font-bold mb-1">Open Time</label>
+                      <input
+                        className="w-full mb-3 p-2 rounded border border-white"
+                        type="time"
+                        value={hours[idx].open_time}
+                        onChange={(e) => handleHoursChange(idx, 'open_time', e.target.value)}
+                      />
+                    </div>
+                    <span className="text-white mx-1 font-bold">-</span>
+                    <div className="flex-1 mr-2">
+                      <label className="block text-white font-bold mb-1">Close Time</label>
+                      <input
+                        className="w-full mb-3 p-2 rounded border border-white"
+                        type="time"
+                        value={hours[idx].close_time}
+                        onChange={(e) => handleHoursChange(idx, 'close_time', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+                <label className="flex items-center ml-2">
+                  <input type="checkbox" checked={hours[idx].closed} onChange={(e) => handleHoursChange(idx, 'closed', e.target.checked)} className="mr-1" />
+                  <span className="text-white font-bold">Closed</span>
+                </label>
               </div>
             ))}
           </div>
@@ -460,23 +670,38 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
       {step === 4 && gym && (
         <div>
           <h2 className="text-xl font-bold mb-4 text-white">Followers</h2>
+          {/* Search Bar */}
+          <input
+            className="w-full mb-4 p-2 rounded border border-white text-gray-200 placeholder:text-gray-300"
+            type="text"
+            placeholder="Search followers by name..."
+            value={followerSearch}
+            onChange={(e) => setFollowerSearch(e.target.value)}
+          />
           {/* Pending Followers */}
           <h3 className="text-lg font-semibold text-yellow-300 mb-2">Pending</h3>
           {followersLoading && <div className="text-gray-400">Loading followers...</div>}
           {followersError && <div className="text-red-400">{followersError}</div>}
-          {pendingFollowers.length === 0 && !followersLoading && <div className="text-gray-400 mb-4">No pending followers.</div>}
+          {filterFollowers(pendingFollowers).length === 0 && !followersLoading && <div className="text-gray-500 mb-4">No pending followers.</div>}
           <ul className="divide-y divide-gray-700 mb-6">
-            {pendingFollowers.map((f) => (
+            {filterFollowers(pendingFollowers).map((f) => (
               <li key={f.id} className="flex items-center gap-4 py-3">
-                <img
-                  src={f.profiles?.avatar_url || '/default-avatar.png'}
-                  alt={f.profiles?.first_name || 'User'}
-                  className="w-12 h-12 rounded-full object-cover border border-gray-500"
-                />
-                <div className="flex-1">
-                  <div className="font-semibold text-white">
+                <a href={`/public-profile/${f.user_id}`} className="hover:underline" title="View Public Profile">
+                  <img
+                    src={f.profiles?.avatar_url || '/default-avatar.png'}
+                    alt={f.profiles?.first_name || 'User'}
+                    className="w-12 h-12 rounded-full object-cover border border-gray-500"
+                  />
+                </a>
+                <div className="flex-1 flex flex-row items-center gap-4">
+                  <a href={`/public-profile/${f.user_id}`} className="font-semibold text-white hover:underline" title="View Public Profile">
                     {f.profiles?.first_name} {f.profiles?.last_name}
-                  </div>
+                  </a>
+                  {f.profiles?.belt_level && <span className="text-sm text-blue-300">[{f.profiles.belt_level} Belt]</span>}
+                  <label className="text-sm text-white flex items-center gap-1">
+                    <input type="checkbox" checked={!!f.profiles?.belt_verified} onChange={(e) => handleToggleBeltVerified(f, e.target.checked)} />
+                    Verified
+                  </label>
                 </div>
                 <button className="bg-green-600 text-white px-3 py-1 rounded font-bold hover:bg-green-700" onClick={() => handleApproveFollower(f)} type="button">
                   Approve
@@ -486,19 +711,26 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
           </ul>
           {/* Active Followers */}
           <h3 className="text-lg font-semibold text-green-400 mb-2">Active</h3>
-          {activeFollowers.length === 0 && <div className="text-gray-400 mb-4">No active followers.</div>}
+          {filterFollowers(activeFollowers).length === 0 && <div className="text-gray-400 mb-4">No active followers.</div>}
           <ul className="divide-y divide-gray-700 mb-6">
-            {activeFollowers.map((f) => (
+            {filterFollowers(activeFollowers).map((f) => (
               <li key={f.id} className="flex items-center gap-4 py-3">
-                <img
-                  src={f.profiles?.avatar_url || '/default-avatar.png'}
-                  alt={f.profiles?.first_name || 'User'}
-                  className="w-12 h-12 rounded-full object-cover border border-gray-500"
-                />
-                <div className="flex-1">
-                  <div className="font-semibold text-white">
+                <a href={`/public-profile/${f.user_id}`} className="hover:underline" title="View Public Profile">
+                  <img
+                    src={f.profiles?.avatar_url || '/default-avatar.png'}
+                    alt={f.profiles?.first_name || 'User'}
+                    className="w-12 h-12 rounded-full object-cover border border-gray-500"
+                  />
+                </a>
+                <div className="flex-1 flex flex-row items-center gap-4">
+                  <a href={`/public-profile/${f.user_id}`} className="font-semibold text-white hover:underline" title="View Public Profile">
                     {f.profiles?.first_name} {f.profiles?.last_name}
-                  </div>
+                  </a>
+                  {f.profiles?.belt_level && <span className="text-sm ">{f.profiles.belt_level} Belt</span>}
+                  <label className="text-sm text-white flex items-center gap-1">
+                    <input type="checkbox" checked={!!f.profiles?.belt_verified} onChange={(e) => handleToggleBeltVerified(f, e.target.checked)} />
+                    Verified
+                  </label>
                 </div>
                 <button className="bg-yellow-600 text-white px-3 py-1 rounded font-bold hover:bg-yellow-700" onClick={() => handleToggleActive(f, false)} type="button">
                   Deactivate
@@ -508,19 +740,26 @@ export default function GymProfileForm({ gym, onSave, user, onDelete }) {
           </ul>
           {/* Inactive Followers */}
           <h3 className="text-lg font-semibold text-gray-400 mb-2">Inactive</h3>
-          {inactiveFollowers.length === 0 && <div className="text-gray-400 mb-4">No inactive followers.</div>}
+          {filterFollowers(inactiveFollowers).length === 0 && <div className="text-gray-400 mb-4">No inactive followers.</div>}
           <ul className="divide-y divide-gray-700">
-            {inactiveFollowers.map((f) => (
+            {filterFollowers(inactiveFollowers).map((f) => (
               <li key={f.id} className="flex items-center gap-4 py-3">
-                <img
-                  src={f.profiles?.avatar_url || '/default-avatar.png'}
-                  alt={f.profiles?.first_name || 'User'}
-                  className="w-12 h-12 rounded-full object-cover border border-gray-500"
-                />
-                <div className="flex-1">
-                  <div className="font-semibold text-white">
+                <a href={`/public-profile/${f.user_id}`} className="hover:underline" title="View Public Profile">
+                  <img
+                    src={f.profiles?.avatar_url || '/default-avatar.png'}
+                    alt={f.profiles?.first_name || 'User'}
+                    className="w-12 h-12 rounded-full object-cover border border-gray-500"
+                  />
+                </a>
+                <div className="flex-1 flex flex-row items-center gap-4">
+                  <a href={`/public-profile/${f.user_id}`} className="font-semibold text-white hover:underline" title="View Public Profile">
                     {f.profiles?.first_name} {f.profiles?.last_name}
-                  </div>
+                  </a>
+                  {f.profiles?.belt_level && <span className="text-sm ">{f.profiles.belt_level} Belt</span>}
+                  <label className="text-sm text-white flex items-center gap-1">
+                    <input type="checkbox" checked={!!f.profiles?.belt_verified} onChange={(e) => handleToggleBeltVerified(f, e.target.checked)} />
+                    Verified
+                  </label>
                 </div>
                 <button className="bg-green-600 text-white px-3 py-1 rounded font-bold hover:bg-green-700" onClick={() => handleToggleActive(f, true)} type="button">
                   Activate

@@ -13,6 +13,17 @@ function formatTime12h(timeStr) {
   return `${hour12}:${minute.toString().padStart(2, '0')} ${ampm}`;
 }
 
+// Helper: flatten schedule by days
+function flattenScheduleByDays(schedule) {
+  const flat = [];
+  for (const sched of schedule) {
+    for (const day of sched.days_of_week || []) {
+      flat.push({ ...sched, day_of_week: day });
+    }
+  }
+  return flat;
+}
+
 export default function SingleGymPage() {
   const { id } = useParams();
   const [gym, setGym] = useState(null);
@@ -83,15 +94,18 @@ export default function SingleGymPage() {
     setFollowLoading(false);
   }
 
+  // In the JSX, update schedule display to show all days for each class
+  const flatSchedule = flattenScheduleByDays(schedule);
+
   // Find next upcoming class
   const getNextClass = () => {
-    if (!schedule.length) return null;
+    if (!flatSchedule.length) return null;
     const now = new Date();
     const nowDay = now.getDay();
     let next = null;
     for (let offset = 0; offset < 7; offset++) {
       const day = (nowDay + offset) % 7;
-      const classes = schedule.filter((s) => s.day_of_week === day);
+      const classes = flatSchedule.filter((s) => s.day_of_week === day);
       const sorted = classes.sort((a, b) => a.start_time.localeCompare(b.start_time));
       for (const c of sorted) {
         if (offset > 0 || c.start_time > now.toTimeString().slice(0, 5)) {
@@ -136,22 +150,19 @@ export default function SingleGymPage() {
     const nowDay = now.getDay();
     const upcoming = [];
     for (let offset = 0; offset < 2; offset++) {
-      // check today and tomorrow
       const day = (nowDay + offset) % 7;
-      const classes = schedule.filter((s) => s.day_of_week === day);
+      const classes = flatSchedule.filter((s) => s.day_of_week === day);
       for (const c of classes) {
-        // Compose class datetime
         const classDate = new Date(now);
         classDate.setDate(now.getDate() + offset);
         const [h, m] = c.start_time.split(':');
         classDate.setHours(Number(h), Number(m), 0, 0);
-        const diff = (classDate - now) / (1000 * 60 * 60); // hours
+        const diff = (classDate - now) / (1000 * 60 * 60);
         if (diff >= 0 && diff <= hours) {
           upcoming.push({ ...c, classDate });
         }
       }
     }
-    // Sort by soonest
     return upcoming.sort((a, b) => a.classDate - b.classDate);
   }
 
@@ -308,9 +319,10 @@ export default function SingleGymPage() {
           {schedule
             .filter((sched) => !sched.is_open_mat)
             .map((sched, idx) => (
-              <li key={idx} className="mb-2   rounded-[8px] shadow text-white">
-                <b className="text-white">{sched.class_name}</b> - <span className="font-semibold">{daysOfWeek[sched.day_of_week]}</span>,{' '}
-                {formatTime12h(sched.start_time)} - {formatTime12h(sched.end_time)} <span className="text-white">({sched.instructor})</span>{' '}
+              <li key={idx} className="mb-2 rounded-[8px] shadow text-white">
+                <b className="text-white">{sched.class_name}</b> -{' '}
+                <span className="font-semibold">{(sched.days_of_week || []).map((d) => daysOfWeek[d]).join(', ')}</span>, {formatTime12h(sched.start_time)} -{' '}
+                {formatTime12h(sched.end_time)} <span className="text-white">({sched.instructor})</span>{' '}
                 {sched.is_private && <span className="text-yellow-400 ml-2">[Private]</span>}
               </li>
             ))}
@@ -322,8 +334,9 @@ export default function SingleGymPage() {
           <ul>
             {openMatClasses.map((sched, idx) => (
               <li key={idx} className="mb-2 rounded-[8px] shadow text-white">
-                <b className="text-white">{sched.class_name}</b> - <span className="font-semibold">{daysOfWeek[sched.day_of_week]}</span>,{' '}
-                {formatTime12h(sched.start_time)} - {formatTime12h(sched.end_time)} <span className="text-white">({sched.instructor})</span>{' '}
+                <b className="text-white">{sched.class_name}</b> -{' '}
+                <span className="font-semibold">{(sched.days_of_week || []).map((d) => daysOfWeek[d]).join(', ')}</span>, {formatTime12h(sched.start_time)} -{' '}
+                {formatTime12h(sched.end_time)} <span className="text-white">({sched.instructor})</span>{' '}
                 {sched.is_private && <span className="text-yellow-400 ml-2">[Private]</span>}
                 <span className="text-green-400 ml-2">[Open Mat]</span>
               </li>
@@ -335,11 +348,20 @@ export default function SingleGymPage() {
         <h2 className="text-xl font-bold mb-2 text-white">Hours of Operation</h2>
         {hours.length === 0 && <div className="text-gray-400">No hours set.</div>}
         <ul>
-          {hours.map((h, idx) => (
-            <li key={idx} className="mb-1 text-white">
-              <span className="font-semibold text-white">{daysOfWeek[h.day_of_week]}</span>: {formatTime12h(h.open_time)} - {formatTime12h(h.close_time)}
-            </li>
-          ))}
+          {daysOfWeek.map((day, idx) => {
+            const h = hours.find((h) => h.day_of_week === idx) || { open_time: '', close_time: '', closed: false };
+            let content;
+            if (h.closed || !h.open_time || !h.close_time) {
+              content = <span className="text-white font-bold">Closed</span>;
+            } else {
+              content = `${formatTime12h(h.open_time)} - ${formatTime12h(h.close_time)}`;
+            }
+            return (
+              <li key={idx} className="mb-1 text-white">
+                <span className="font-semibold text-white">{day}</span>: {content}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

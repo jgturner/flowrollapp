@@ -50,7 +50,7 @@ function App() {
     <>
       <VideoReadyPoller />
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-white ">Videos</h1>
+        <h1 className="text-3xl font-bold text-white ">Feed</h1>
       </div>
       <SearchAndFilter onSearchChange={setSearchTerm} onFilterChange={setSelectedPosition} />
       {loading ? (

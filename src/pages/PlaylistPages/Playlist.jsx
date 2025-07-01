@@ -92,14 +92,6 @@ export default function Playlist() {
     <>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-white">Playlist</h1>
-        <div className="flex items-center gap-6">
-          <Link to="/" className="hover:underline font-semibold px-4 py-2 rounded-md">
-            <FaPhotoVideo size={22} className="mr-2" />
-          </Link>
-          <Link to="/addTechnique" className="bg-white text-black hover:bg-neutral-200  font-semibold px-4 py-2 rounded-md border border-white flex items-center">
-            <RiVideoUploadLine size={22} className="mr-2" />
-          </Link>
-        </div>
       </div>
       <SearchAndFilter onSearchChange={setSearchTerm} onFilterChange={setSelectedPosition} />
       {filteredPlaylist.length > 0 ? (

@@ -19,9 +19,9 @@ export default function ManageGymPage() {
   }, [user]);
 
   return (
-    <div className="pt-6  mx-auto">
-      <h2 className="text-2xl font-bold text-white mb-6 text-center">Manage Gym</h2>
-      <div className="bg-black  rounded-lg p-6">
+    <div className="mx-auto">
+      <h2 className="text-2xl font-bold text-white mb-6 text-left">Manage Gym</h2>
+      <div className="bg-black  rounded-lg">
         <GymProfileForm
           gym={userGym}
           user={user}
