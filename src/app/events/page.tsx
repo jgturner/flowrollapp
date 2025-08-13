@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Search, Calendar, Trophy, Swords, Filter, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -109,7 +109,7 @@ function hasConfirmed(obj: unknown): obj is { confirmed: boolean } {
   return typeof obj === 'object' && obj !== null && 'confirmed' in obj && typeof (obj as { confirmed?: unknown }).confirmed === 'boolean';
 }
 
-export default function EventsPage() {
+function EventsPageContent() {
   const { user, profile } = useAuth();
   const searchParams = useSearchParams();
   const [events, setEvents] = useState<Event[]>([]);
@@ -954,4 +954,28 @@ function getEventTypeIcon(type: string) {
 
 function getEventTypeColor(type: string) {
   return type === 'tournament' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800';
+}
+
+// Wrapper component to handle Suspense boundary for useSearchParams
+export default function EventsPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout breadcrumbs={[{ label: 'Events', href: '/events', isActive: true }]}>
+          <div className="max-w-7xl mx-auto space-y-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <Skeleton className="h-8 w-48 mx-auto mb-4" />
+                  <Skeleton className="h-4 w-32 mx-auto" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </DashboardLayout>
+      }
+    >
+      <EventsPageContent />
+    </Suspense>
+  );
 }

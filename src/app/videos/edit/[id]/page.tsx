@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -258,7 +258,7 @@ interface Technique {
   status: 'draft' | 'published' | 'uploading' | 'error' | null;
 }
 
-export default function EditVideoPage() {
+function EditVideoPageContent() {
   const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -787,5 +787,38 @@ export default function EditVideoPage() {
         </div>
       </DashboardLayout>
     </ProtectedRoute>
+  );
+}
+
+// Wrapper component to handle Suspense boundary for useSearchParams
+export default function EditVideoPage() {
+  return (
+    <Suspense
+      fallback={
+        <ProtectedRoute>
+          <DashboardLayout
+            breadcrumbs={[
+              { label: 'Videos', href: '/videos/upload', isActive: false },
+              { label: 'Edit Video', href: '#', isActive: true },
+            ]}
+          >
+            <div className="max-w-7xl mx-auto space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <div className="animate-pulse">
+                      <div className="h-8 w-48 mx-auto mb-4 bg-gray-200 rounded"></div>
+                      <div className="h-4 w-32 mx-auto bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </DashboardLayout>
+        </ProtectedRoute>
+      }
+    >
+      <EditVideoPageContent />
+    </Suspense>
   );
 }

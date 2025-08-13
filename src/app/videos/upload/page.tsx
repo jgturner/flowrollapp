@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,7 +66,7 @@ interface Technique {
   updated_date: string;
 }
 
-export default function ManageVideosPage() {
+function ManageVideosPageContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -455,5 +455,33 @@ export default function ManageVideosPage() {
         />
       </DashboardLayout>
     </ProtectedRoute>
+  );
+}
+
+// Wrapper component to handle Suspense boundary for useSearchParams
+export default function ManageVideosPage() {
+  return (
+    <Suspense
+      fallback={
+        <ProtectedRoute>
+          <DashboardLayout breadcrumbs={[{ label: 'Videos', href: '/videos/upload', isActive: true }]}>
+            <div className="max-w-7xl mx-auto space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <div className="animate-pulse">
+                      <div className="h-8 w-48 mx-auto mb-4 bg-gray-200 rounded"></div>
+                      <div className="h-4 w-32 mx-auto bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </DashboardLayout>
+        </ProtectedRoute>
+      }
+    >
+      <ManageVideosPageContent />
+    </Suspense>
   );
 }
