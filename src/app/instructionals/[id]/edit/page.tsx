@@ -109,12 +109,15 @@ export default function EditInstructionalPage() {
           isExisting: true,
           videos: (section.videos as Record<string, unknown>[])
             .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (a.order_index as number) - (b.order_index as number))
-            .map((video: Record<string, unknown>) => ({
-              id: video.technique.id,
-              title: video.technique.title,
-              mux_playback_id: video.technique.mux_playback_id,
-              thumbnail_time: video.technique.thumbnail_time,
-            })),
+            .map((video: Record<string, unknown>) => {
+              const technique = video.technique as Record<string, unknown>;
+              return {
+                id: technique.id,
+                title: technique.title,
+                mux_playback_id: technique.mux_playback_id,
+                thumbnail_time: technique.thumbnail_time,
+              };
+            }),
         }));
         setSections(formattedSections);
       }
