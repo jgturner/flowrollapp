@@ -49,8 +49,6 @@ export async function POST(request: NextRequest) {
           error: `Upload failed: ${uploadError.message}`,
           details: {
             message: uploadError.message,
-            details: uploadError.details,
-            hint: uploadError.hint,
           },
         },
         { status: 500 }
