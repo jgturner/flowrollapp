@@ -53,6 +53,7 @@ interface Competition {
   match_type: string;
   podium_photo_url?: string;
   created_at: string;
+  [key: string]: unknown;
 }
 
 export default function CompetitionsPage() {
