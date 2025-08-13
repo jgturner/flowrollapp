@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Prepare update data
-    const updateData = {
+    const updateData: Record<string, unknown> = {
       title,
       position,
       description,
