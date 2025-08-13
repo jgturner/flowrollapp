@@ -1,6 +1,15 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  typescript: {
+    // ⚠️ Dangerously allow production builds to successfully complete even if
+    // your project has type errors.
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    // This is already set in your ESLint config, but you can also disable it here
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {

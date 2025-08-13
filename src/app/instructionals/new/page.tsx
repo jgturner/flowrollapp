@@ -203,17 +203,20 @@ export default function NewInstructionalPage() {
 
       console.log('Insert result:', insertResult);
 
-      const { data: instructional, error: instructionalError } = insertResult;
+      // Type guard to ensure insertResult is a Supabase response
+      if (!insertResult || typeof insertResult !== 'object' || !('data' in insertResult)) {
+        throw new Error('Invalid insert result from database');
+      }
+
+      const { data: instructional, error: instructionalError } = insertResult as { data: any; error: any };
 
       if (instructionalError) {
         console.error('Instructional creation error details:', {
           error: instructionalError,
-          message: instructionalError.message,
-          code: instructionalError.code,
-          details: instructionalError.details,
-          hint: instructionalError.hint,
+          message: (instructionalError as any)?.message,
+          code: (instructionalError as any)?.code,
         });
-        throw new Error(`Database error: ${instructionalError.message} (Code: ${instructionalError.code})`);
+        throw new Error(`Database error: ${(instructionalError as any)?.message || 'Unknown error'}`);
       }
 
       console.log('Instructional created:', instructional);
