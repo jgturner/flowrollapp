@@ -12,9 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { UserProfileDisplay } from '@/components/user-profile-display';
-import { AlertTriangle, Calendar, MapPin, Trophy, FileText, Clock, User, TrendingDown, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Calendar, MapPin, Trophy, TrendingDown, CheckCircle } from 'lucide-react';
 import { format as formatDate } from 'date-fns';
 
 interface WithdrawalData {

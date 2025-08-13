@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserProfileDisplay, UserProfile } from '@/components/user-profile-display';
-import { Send, Clock, Check, X, AlertCircle, Users, Calendar, MapPin, Trophy, Filter } from 'lucide-react';
+import { Send, Check, X, AlertCircle, Users, Calendar, MapPin, Trophy, Filter } from 'lucide-react';
 import { format as formatDate } from 'date-fns';
 
 interface MatchRequest {
@@ -191,19 +191,6 @@ export function MatchRequestSystem({ userRole, eventId, matchId }: MatchRequestS
       await fetchRequests();
     } catch (err) {
       console.error('Error handling request:', err);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
     }
   };
 

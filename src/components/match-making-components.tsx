@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,7 +70,7 @@ interface MatchMakingComponentsProps {
 }
 
 export function MatchMakingComponents({ match, onMatchUpdate, canEdit }: MatchMakingComponentsProps) {
-  const { user } = useAuth();
+  const {} = useAuth();
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
@@ -561,7 +561,7 @@ export function MatchRequestsComponent({ match, onMatchUpdate }: { match: Match;
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <UserProfileDisplay user={request.user_profile} size="md" linkToProfile={false} />
-                  {request.message && <p className="text-sm text-muted-foreground mt-2">"{request.message}"</p>}
+                  {request.message && <p className="text-sm text-muted-foreground mt-2">&ldquo;{request.message}&rdquo;</p>}
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => handleRequest(request.id, 'approve')} className="bg-green-600 hover:bg-green-700">

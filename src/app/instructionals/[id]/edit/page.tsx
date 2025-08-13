@@ -102,14 +102,14 @@ export default function EditInstructionalPage() {
 
       // Set sections data
       if (data.sections) {
-        const sortedSections = data.sections.sort((a: any, b: any) => a.order_index - b.order_index);
-        const formattedSections = sortedSections.map((section: any) => ({
+        const sortedSections = data.sections.sort((a: Record<string, unknown>, b: Record<string, unknown>) => (a.order_index as number) - (b.order_index as number));
+        const formattedSections = sortedSections.map((section: Record<string, unknown>) => ({
           id: section.id,
           name: section.name,
           isExisting: true,
-          videos: section.videos
-            .sort((a: any, b: any) => a.order_index - b.order_index)
-            .map((video: any) => ({
+          videos: (section.videos as Record<string, unknown>[])
+            .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (a.order_index as number) - (b.order_index as number))
+            .map((video: Record<string, unknown>) => ({
               id: video.technique.id,
               title: video.technique.title,
               mux_playback_id: video.technique.mux_playback_id,
@@ -415,7 +415,7 @@ export default function EditInstructionalPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {sections.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No sections yet. Click "Add Section" to get started.</div>
+                <div className="text-center py-8 text-muted-foreground">No sections yet. Click &ldquo;Add Section&rdquo; to get started.</div>
               ) : (
                 sections.map((section, index) => (
                   <Card key={section.id}>

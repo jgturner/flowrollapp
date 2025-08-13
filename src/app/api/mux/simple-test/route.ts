@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   console.log('🧪 Simple test endpoint called');
   return NextResponse.json({
     success: true,
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   console.log('🧪 Simple test POST endpoint called');
   return NextResponse.json({
     success: true,

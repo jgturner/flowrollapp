@@ -35,7 +35,7 @@ export class RealMuxService {
    * Create a new direct upload for video content
    * This would be called from an API route that has access to the Mux MCP
    */
-  async createUpload(filename: string, fileSize: number): Promise<MuxUploadResponse> {
+  async createUpload(_filename: string, _fileSize: number): Promise<MuxUploadResponse> {
     try {
       // In a real implementation, this would call the Mux MCP:
       // const response = await mcp_mux_invoke_api_endpoint('create_video_uploads', {
@@ -65,7 +65,7 @@ export class RealMuxService {
   /**
    * Check the status of an upload and get asset details
    */
-  async getUploadStatus(uploadId: string): Promise<MuxAssetStatus> {
+  async getUploadStatus(_uploadId: string): Promise<MuxAssetStatus> {
     try {
       // In a real implementation, this would call the Mux MCP:
       // const response = await mcp_mux_invoke_api_endpoint('retrieve_video_uploads', {
@@ -115,7 +115,7 @@ export class RealMuxService {
   /**
    * Create a playback ID for an asset
    */
-  async createPlaybackId(assetId: string): Promise<string> {
+  async createPlaybackId(_assetId: string): Promise<string> {
     try {
       // In a real implementation, this would call the Mux MCP:
       // const response = await mcp_mux_invoke_api_endpoint('create_playback_id_video_assets', {
@@ -135,7 +135,7 @@ export class RealMuxService {
   /**
    * Get asset details
    */
-  async getAsset(assetId: string): Promise<any> {
+  async getAsset(_assetId: string): Promise<Record<string, unknown>> {
     try {
       // In a real implementation, this would call the Mux MCP:
       // const response = await mcp_mux_invoke_api_endpoint('retrieve_video_assets', {

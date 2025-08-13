@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
 import { getAISummary } from '@/lib/ai-summary-cache';
-type DataItem = any; // Type assertion helper
+interface DataItem {
+  [key: string]: unknown;
+}
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

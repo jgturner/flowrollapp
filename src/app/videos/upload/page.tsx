@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,6 @@ import { supabase } from '@/lib/supabase';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { ProtectedRoute } from '@/components/protected-route';
 import { UploadVideoModal } from '@/components/upload-video-modal';
-import Link from 'next/link';
 
 const POSITION_OPTIONS = [
   'Standing',
@@ -76,7 +75,7 @@ export default function ManageVideosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPosition, setSelectedPosition] = useState('');
   const [activeTab, setActiveTab] = useState<'drafts' | 'published'>('drafts');
-  const [isPolling, setIsPolling] = useState(false);
+  const [, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 

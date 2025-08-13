@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Video, Upload, CheckCircle, AlertCircle, XCircle, ArrowLeft, ImageIcon, RefreshCw, Loader2, Save } from 'lucide-react';
+import { Video, Upload, CheckCircle, AlertCircle, XCircle, ImageIcon, RefreshCw, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@supabase/supabase-js';
 import { cn } from '@/lib/utils';
@@ -35,7 +35,7 @@ const InstantThumbnailSection = ({
   onRegenerateRef?: React.MutableRefObject<(() => void) | null>;
 }) => {
   const [thumbnails, setThumbnails] = React.useState<{ time: number; url: string; selected: boolean }[]>([]);
-  const [selectedIndex, setSelectedIndex] = React.useState<number>(0);
+  const [, setSelectedIndex] = React.useState<number>(0);
   const [isLoading, setIsLoading] = React.useState(false);
 
   // Generate thumbnails with loading delay to give Mux time to process

@@ -190,14 +190,14 @@ export default function NewInstructionalPage() {
       } catch (dbError) {
         console.error('Database call threw an exception:', dbError);
         console.error('Error details:', {
-          name: (dbError as any)?.name,
-          message: (dbError as any)?.message,
-          code: (dbError as any)?.code,
-          details: (dbError as any)?.details,
-          hint: (dbError as any)?.hint,
-          stack: (dbError as any)?.stack,
+          name: (dbError as Error)?.name,
+          message: (dbError as Error)?.message,
+          code: (dbError as Record<string, unknown>)?.code,
+          details: (dbError as Record<string, unknown>)?.details,
+          hint: (dbError as Record<string, unknown>)?.hint,
+          stack: (dbError as Error)?.stack,
         });
-        const errorMessage = (dbError as any)?.message || String(dbError);
+        const errorMessage = (dbError as Error)?.message || String(dbError);
         throw new Error(`Database call failed: ${errorMessage}`);
       }
 
@@ -352,7 +352,7 @@ export default function NewInstructionalPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {sections.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No sections yet. Click "Add Section" to get started.</div>
+                <div className="text-center py-8 text-muted-foreground">No sections yet. Click &ldquo;Add Section&rdquo; to get started.</div>
               ) : (
                 sections.map((section, index) => (
                   <Card key={section.id}>

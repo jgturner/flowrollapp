@@ -17,12 +17,11 @@ interface UploadVideoModalProps {
 
 export function UploadVideoModal({ open, onOpenChange, onUploadSuccess }: UploadVideoModalProps) {
   const { user } = useAuth();
-  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

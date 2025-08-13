@@ -237,7 +237,7 @@ async function processVideoUpload(techniqueId: string, file: File) {
 
     console.log('💾 About to update techniques record:', updatePayload);
 
-    const { data: updateData, error: updateError } = await supabase.from('techniques').update(updatePayload).eq('id', techniqueId).select();
+    const { error: updateError } = await supabase.from('techniques').update(updatePayload).eq('id', techniqueId).select();
 
     if (updateError) {
       console.error('💾 Supabase update failed:', updateError);
