@@ -168,7 +168,8 @@ async function processVideoUpload(techniqueId: string, file: File) {
         'Content-Type': file.type,
       },
       body: file.stream(),
-      duplex: 'half', // Required for Node.js 18+ when sending a body
+      // @ts-ignore - duplex is required for Node.js 18+ when sending a body but not in TypeScript types yet
+      duplex: 'half',
     });
 
     if (!uploadRes.ok) {
