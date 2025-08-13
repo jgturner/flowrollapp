@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
+import { getAISummary } from '@/lib/ai-summary-cache';
+type DataItem = any; // Type assertion helper
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,13 +74,21 @@ interface Competition {
 }
 
 export default function StatsPage() {
-  const { user } = useAuth();
+  const { user, userPlusSubscription } = useAuth();
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'training' | 'competitions'>('training');
   const [trainingSubView, setTrainingSubView] = useState<'format' | 'category'>('format');
+  // Add XAI summary state
+  const [xaiSummary, setXaiSummary] = useState<string | null>(null);
+  const [xaiLoading, setXaiLoading] = useState(false);
+  const [xaiError, setXaiError] = useState<string | null>(null);
+  // Add XAI summary state for competitions
+  const [xaiCompSummary, setXaiCompSummary] = useState<string | null>(null);
+  const [xaiCompLoading, setXaiCompLoading] = useState(false);
+  const [xaiCompError, setXaiCompError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -114,6 +124,52 @@ export default function StatsPage() {
 
     fetchData();
   }, [user]);
+
+  // Fetch XAI summary when sessions are loaded with caching
+  useEffect(() => {
+    if (!user || loading || !sessions.length || !userPlusSubscription) {
+      setXaiSummary(null);
+      setXaiError(null);
+      setXaiLoading(false);
+      return;
+    }
+
+    setXaiLoading(true);
+    setXaiError(null);
+
+    getAISummary(user.id, 'training', sessions as DataItem[])
+      .then((result) => {
+        setXaiSummary(result.summary);
+        setXaiError(result.error);
+      })
+      .finally(() => {
+        setXaiLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading, sessions.length, userPlusSubscription]);
+
+  // Fetch XAI summary for competitions when competitions are loaded with caching
+  useEffect(() => {
+    if (!user || loading || !competitions.length || !userPlusSubscription) {
+      setXaiCompSummary(null);
+      setXaiCompError(null);
+      setXaiCompLoading(false);
+      return;
+    }
+
+    setXaiCompLoading(true);
+    setXaiCompError(null);
+
+    getAISummary(user.id, 'competitions', competitions)
+      .then((result) => {
+        setXaiCompSummary(result.summary);
+        setXaiCompError(result.error);
+      })
+      .finally(() => {
+        setXaiCompLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading, competitions.length, userPlusSubscription]);
 
   const breadcrumbs = [
     { label: 'Dashboard', href: '/feed' },
@@ -214,6 +270,57 @@ export default function StatsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
+            {/* XAI Summary Section */}
+            {view === 'training' && (
+              <div className="mb-6">
+                {userPlusSubscription ? (
+                  <>
+                    {xaiLoading && <Skeleton className="h-6 w-full mb-2" />}
+                    {xaiError && <div className="text-red-500 text-sm mb-2">{xaiError}</div>}
+                    {xaiSummary && !xaiLoading && !xaiError && (
+                      <div className="p-4 rounded-lg border text-base">
+                        <strong>Training Summary & Recommendation:</strong>
+                        <div className="mt-1">{xaiSummary}</div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <Card>
+                    <CardContent className="flex flex-col items-center">
+                      <div className="mb-2 text-center">Upgrade to User+ to unlock AI-powered training summaries and recommendations!</div>
+                      <Button onClick={() => (window.location.href = '/subscriptions')} variant="default">
+                        View Subscription Options
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+            {view === 'competitions' && (
+              <div className="mb-6">
+                {userPlusSubscription ? (
+                  <>
+                    {xaiCompLoading && <Skeleton className="h-6 w-full mb-2" />}
+                    {xaiCompError && <div className="text-red-500 text-sm mb-2">{xaiCompError}</div>}
+                    {xaiCompSummary && !xaiCompLoading && !xaiCompError && (
+                      <div className="p-4 rounded-lg border text-base">
+                        <strong>Competition Summary & Recommendation:</strong>
+                        <div className="mt-1">{xaiCompSummary}</div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <Card>
+                    <CardContent className="flex flex-col items-center">
+                      <div className="mb-2 text-center">Upgrade to User+ to unlock AI-powered competition summaries and recommendations!</div>
+                      <Button onClick={() => (window.location.href = '/subscriptions')} variant="default">
+                        View Subscription Options
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
             {/* Main View Toggle */}
             <div className="flex gap-2">
               <Button variant={view === 'training' ? 'default' : 'outline'} onClick={() => setView('training')}>

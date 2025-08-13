@@ -56,6 +56,8 @@ interface Technique {
   position: string;
   mux_playback_id: string;
   thumbnail_time?: number;
+  thumbnail_url?: string;
+  status?: string;
   created_date: string;
 }
 
@@ -88,14 +90,14 @@ export default function VideosPage() {
           if (error) {
             console.error('Search error:', error);
             // Fallback to regular query if search function doesn't exist
-            query = supabase.from('techniques').select('*');
+            query = supabase.from('techniques').select('*').eq('status', 'published');
           } else {
             setTechniques(data || []);
             setLoading(false);
             return;
           }
         } else {
-          query = supabase.from('techniques').select('*');
+          query = supabase.from('techniques').select('*').eq('status', 'published');
         }
 
         // Apply position filter if selected
@@ -256,9 +258,12 @@ export default function VideosPage() {
           <>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {paginatedTechniques.map((technique) => {
-                const thumbnailUrl = `https://image.mux.com/${technique.mux_playback_id}/thumbnail.jpg?width=320${
-                  technique.thumbnail_time !== undefined && technique.thumbnail_time !== null ? `&time=${technique.thumbnail_time}` : ''
-                }`;
+                // Use custom thumbnail if available, otherwise use Mux thumbnail with timestamp
+                const thumbnailUrl =
+                  technique.thumbnail_url ||
+                  `https://image.mux.com/${technique.mux_playback_id}/thumbnail.jpg?width=320${
+                    technique.thumbnail_time !== undefined && technique.thumbnail_time !== null ? `&time=${technique.thumbnail_time}` : ''
+                  }`;
 
                 return (
                   <Link href={`/technique/${technique.id}`} key={technique.id} className="block">

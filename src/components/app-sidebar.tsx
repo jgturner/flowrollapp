@@ -7,9 +7,6 @@ import { useRouter } from 'next/navigation';
 import {
   Users,
   BarChart3,
-  FileText,
-  Bell,
-  MessageSquare,
   Activity,
   Video,
   List,
@@ -27,6 +24,9 @@ import {
   LayoutDashboard,
   X,
   Music,
+  CalendarDays,
+  Settings,
+  Upload,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -47,7 +47,7 @@ import { authService, Profile } from '@/lib/auth';
 
 // Extended profile type that includes username
 interface ProfileWithUsername extends Profile {
-  username?: string | null;
+  username: string | null;
 }
 
 // Menu items.
@@ -71,6 +71,11 @@ const items = [
     title: 'Competitions',
     url: '/competitions',
     icon: Trophy,
+  },
+  {
+    title: 'Events',
+    url: '/events',
+    icon: CalendarDays,
   },
   {
     title: 'Users',
@@ -124,6 +129,11 @@ const instructionItems = [
     icon: Video,
   },
   {
+    title: 'Manage Videos',
+    url: '/videos/upload',
+    icon: Upload,
+  },
+  {
     title: 'Playlist',
     url: '/playlist',
     icon: List,
@@ -137,34 +147,27 @@ const instructionItems = [
 
 const platformItems = [
   {
-    title: 'Users',
-    url: '/users',
-    icon: Users,
+    title: 'Subscriptions',
+    url: '/subscriptions',
+    icon: UserCheck,
   },
   {
-    title: 'Analytics',
-    url: '/analytics',
-    icon: BarChart3,
+    title: 'Event Management',
+    url: '/events/manage',
+    icon: Settings,
+    requiresEventPlus: true,
   },
   {
-    title: 'Posts',
-    url: '/posts',
-    icon: FileText,
-  },
-  {
-    title: 'Notifications',
-    url: '/notifications',
-    icon: Bell,
-  },
-  {
-    title: 'Messages',
-    url: '/messages',
-    icon: MessageSquare,
+    title: 'Manage Instructionals',
+    url: '/instructionals/manage',
+    icon: BookOpen, // Use BookOpen for consistency with instructionals
+    requiresUserPlus: true,
   },
 ];
 
 export function AppSidebar() {
-  const { user, profile, signOut, isSpotifyPlaying, toggleSpotifyPlayer, closeSpotifyPlayer } = useAuth();
+  const { user, profile, signOut, isSpotifyPlaying, toggleSpotifyPlayer, closeSpotifyPlayer, userPlusSubscription, eventPlusSubscription, gymEventPlusSubscription } =
+    useAuth();
   const { state } = useSidebar();
   const [imageError, setImageError] = useState(false);
   const router = useRouter();
@@ -341,16 +344,22 @@ export function AppSidebar() {
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {platformItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {platformItems
+                .filter((item) => {
+                  if (item.requiresUserPlus) return userPlusSubscription;
+                  if (item.requiresEventPlus) return eventPlusSubscription || gymEventPlusSubscription;
+                  return true;
+                })
+                .map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <Link href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

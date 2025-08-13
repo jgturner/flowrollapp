@@ -24,6 +24,7 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<'
     lastName: '',
     username: '',
     beltLevel: '' as 'White' | 'Blue' | 'Purple' | 'Brown' | 'Black',
+    gender: '' as 'male' | 'female',
     feet: '',
     inches: '',
     weight: '',
@@ -63,6 +64,11 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<'
       return;
     }
 
+    if (!formData.gender) {
+      setError('Please select your gender');
+      return;
+    }
+
     // Validate username format
     const usernameRegex = /^[a-z0-9_]+$/;
     if (!usernameRegex.test(formData.username)) {
@@ -88,6 +94,7 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<'
         lastName: formData.lastName,
         username: formData.username,
         beltLevel: formData.beltLevel,
+        gender: formData.gender,
         height: convertHeightToMeters(feet, inches),
         weight: convertWeightToKg(weightLbs),
         dateOfBirth: format(date, 'yyyy-MM-dd'),
@@ -184,6 +191,20 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<'
                     <SelectItem value="Purple">Purple</SelectItem>
                     <SelectItem value="Brown">Brown</SelectItem>
                     <SelectItem value="Black">Black</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Gender */}
+              <div className="grid gap-3">
+                <Label htmlFor="gender">Gender</Label>
+                <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)} disabled={isLoading}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

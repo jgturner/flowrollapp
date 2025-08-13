@@ -6,9 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { BookOpen, Clock, DollarSign, Edit, Play, Users } from 'lucide-react';
+import { BookOpen, Clock, Edit, Play } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -95,10 +93,10 @@ export default function InstructionalDetailPage() {
 
       // Sort sections and videos by order_index
       if (data.sections) {
-        data.sections.sort((a: any, b: any) => a.order_index - b.order_index);
-        data.sections.forEach((section: any) => {
+        (data.sections as InstructionalSection[]).sort((a, b) => a.order_index - b.order_index);
+        (data.sections as InstructionalSection[]).forEach((section) => {
           if (section.videos) {
-            section.videos.sort((a: any, b: any) => a.order_index - b.order_index);
+            (section.videos as SectionVideo[]).sort((a, b) => a.order_index - b.order_index);
           }
         });
       }
@@ -181,7 +179,7 @@ export default function InstructionalDetailPage() {
 
   return (
     <DashboardLayout breadcrumbs={breadcrumbs}>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <Card>
           <CardContent className="pt-6">
@@ -201,10 +199,9 @@ export default function InstructionalDetailPage() {
               <div className="lg:w-2/3 space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h1 className="text-3xl font-bold mb-2">{instructional.title}</h1>
+                    <h1 className="text-xl font-bold mb-2">{instructional.title}</h1>
                     <div className="flex items-center gap-2 mb-4">
-                      <Badge variant={instructional.status === 'published' ? 'default' : 'secondary'}>{instructional.status}</Badge>
-                      <span className="text-2xl font-bold">${instructional.price.toFixed(2)}</span>
+                      <span className="text-lg font-bold">${instructional.price.toFixed(2)}</span>
                     </div>
                   </div>
                   {canEdit && (
@@ -217,10 +214,10 @@ export default function InstructionalDetailPage() {
                   )}
                 </div>
 
-                {instructional.description && <p className="text-muted-foreground text-lg leading-relaxed">{instructional.description}</p>}
+                {instructional.description && <p className="text-muted-foreground leading-relaxed">{instructional.description}</p>}
 
                 {/* Stats */}
-                <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
+                <div className="flex flex-wrap gap-6 text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Play className="h-4 w-4" />
                     <span>{getTotalVideoCount()} videos</span>
@@ -234,6 +231,7 @@ export default function InstructionalDetailPage() {
                     <span>{instructional.sections?.length || 0} sections</span>
                   </div>
                 </div>
+                <Button>Add to Cart</Button>
               </div>
             </div>
           </CardContent>
@@ -242,8 +240,8 @@ export default function InstructionalDetailPage() {
         {/* Sections */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Course Content</h2>
-            <div className="text-sm text-muted-foreground">
+            <h2 className="font-bold">Course Content</h2>
+            <div className="text-muted-foreground">
               {getTotalVideoCount()} videos • {formatDuration(getTotalDuration())}
             </div>
           </div>
@@ -251,26 +249,26 @@ export default function InstructionalDetailPage() {
           {instructional.sections && instructional.sections.length > 0 ? (
             instructional.sections.map((section, sectionIndex) => (
               <Card key={section.id}>
-                <CardHeader>
-                  <CardTitle className="text-lg">
+                <CardHeader className="py-1 px-2">
+                  <CardTitle className="">
                     {sectionIndex + 1}. {section.name}
                   </CardTitle>
                   <CardDescription>
-                    {section.videos.length} videos • {formatDuration(section.videos.reduce((total, video) => total + 0, 0))}
+                    {section.videos.length} videos • {formatDuration(section.videos.reduce((total) => total + 0, 0))}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="py-1 px-2">
                   {section.videos.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="space-y-0.5">
                       {section.videos.map((video, videoIndex) => (
-                        <div key={video.id} className="flex items-center gap-3 p-3 rounded-lg">
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium">{videoIndex + 1}</div>
+                        <div key={video.id} className="flex items-center gap-2 rounded-lg">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-medium">{videoIndex + 1}</div>
                           <div className="flex-1">
-                            <Link href={`/technique/${video.technique.id}`} className="text-sm font-medium">
+                            <Link href={`/technique/${video.technique.id}`} className="font-medium">
                               {video.technique.title}
                             </Link>
                           </div>
-                          <div className="text-xs text-muted-foreground">--:--</div>
+                          <div className="text-muted-foreground">--:--</div>
                         </div>
                       ))}
                     </div>
@@ -300,24 +298,6 @@ export default function InstructionalDetailPage() {
             </Card>
           )}
         </div>
-
-        {/* Purchase/Access Section */}
-        {!isOwner && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4">
-                <div className="text-2xl font-bold">Get Full Access</div>
-                <div className="text-muted-foreground">Access all {getTotalVideoCount()} videos in this instructional</div>
-                <div className="text-3xl font-bold">${instructional.price.toFixed(2)}</div>
-                <Button size="lg" className="px-8" disabled>
-                  <DollarSign className="h-5 w-5 mr-2" />
-                  Purchase Access (Coming Soon)
-                </Button>
-                <div className="text-xs text-muted-foreground">Purchase functionality will be available soon</div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </DashboardLayout>
   );

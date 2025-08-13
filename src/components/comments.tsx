@@ -1,21 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Reply, Edit3, Trash2, User } from 'lucide-react';
-
-interface Profile {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  belt_level: 'White' | 'Blue' | 'Purple' | 'Brown' | 'Black' | null;
-  avatar_url: string | null;
-}
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { MessageCircle, Reply, Edit3, Trash2 } from 'lucide-react';
+import { UserProfileDisplay, UserProfile } from '@/components/user-profile-display';
 
 interface Comment {
   id: string;
@@ -23,7 +18,7 @@ interface Comment {
   user_id: string;
   technique_id: string;
   created_at: string;
-  profile?: Profile;
+  profile?: UserProfile;
 }
 
 interface Reply {
@@ -32,7 +27,7 @@ interface Reply {
   user_id: string;
   comment_id: string;
   created_at: string;
-  profile?: Profile;
+  profile?: UserProfile;
 }
 
 interface CommentProps {
@@ -40,46 +35,67 @@ interface CommentProps {
 }
 
 export function Comments({ techniqueId }: CommentProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchComments();
-  }, [techniqueId]);
+  const fetchComments = useCallback(async () => {
+    const timeoutId = setTimeout(() => {
+      console.warn('Comments fetch taking too long, timing out...');
+      setLoading(false);
+      setComments([]);
+    }, 10000); // 10 second timeout
 
-  const fetchComments = async () => {
     try {
+      console.log('Fetching comments for technique:', techniqueId);
       setLoading(true);
 
+      // OPTIMIZED: Fetch comments with profiles in a single join query
       const { data: commentsData, error } = await supabase
         .from('comments')
         .select(
           `
           *,
-          profiles:user_id (
-            id,
-            first_name,
-            last_name,
-            belt_level,
-            avatar_url
+          profiles!inner(
+            id, first_name, last_name, belt_level, avatar_url, username, spotify_id
           )
         `
         )
         .eq('technique_id', techniqueId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching comments with profiles:', error);
+        throw error;
+      }
 
-      setComments(commentsData || []);
+      console.log('Comments with profiles fetched (optimized):', commentsData?.length || 0);
+
+      // Map the joined data to the expected format
+      const commentsWithProfiles =
+        commentsData?.map((comment) => ({
+          ...comment,
+          profile: comment.profiles,
+        })) || [];
+
+      setComments(commentsWithProfiles);
+      clearTimeout(timeoutId);
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      console.error('Error in fetchComments:', error);
+      setComments([]);
+      clearTimeout(timeoutId);
     } finally {
       setLoading(false);
     }
-  };
+  }, [techniqueId]);
+
+  useEffect(() => {
+    if (techniqueId) {
+      fetchComments();
+    }
+  }, [techniqueId, fetchComments]);
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,34 +104,58 @@ export function Comments({ techniqueId }: CommentProps) {
     setSubmitting(true);
 
     try {
-      const { data, error } = await supabase
+      // Check current authentication state
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.log('Current session:', session);
+      console.log('User from context:', user);
+
+      if (!session?.user) {
+        throw new Error('No authenticated session found');
+      }
+      // First, try simple insert without the complex select
+      const { data: insertData, error: insertError } = await supabase
         .from('comments')
         .insert({
           content: newComment.trim(),
-          user_id: user.id,
+          user_id: session.user.id, // Use session user ID instead of context user ID
           technique_id: techniqueId,
         })
-        .select(
-          `
-          *,
-          profiles:user_id (
-            id,
-            first_name,
-            last_name,
-            belt_level,
-            avatar_url
-          )
-        `
-        )
+        .select('*')
         .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
+
+      // Then fetch the profile data separately
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, belt_level, avatar_url, username, spotify_id')
+        .eq('id', session.user.id)
+        .single();
+
+      // Combine the data
+      const data = {
+        ...insertData,
+        profile: profileData,
+      };
 
       setComments((prev) => [data, ...prev]);
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);
-      alert('Failed to add comment');
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      console.error('Context User ID:', user?.id);
+      console.error('Technique ID:', techniqueId);
+      console.error('Comment content:', newComment.trim());
+
+      // Check session again to debug auth issues
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.error('Session at error time:', session);
+
+      alert(`Failed to add comment: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSubmitting(false);
     }
@@ -140,92 +180,96 @@ export function Comments({ techniqueId }: CommentProps) {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            Comments
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <MessageCircle className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-lg font-semibold">Comments</h3>
+        </div>
+        <Separator />
+        <div className="space-y-6">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex gap-3">
+            <div key={i} className="flex gap-4">
               <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-16 w-full" />
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+                <Skeleton className="h-20 w-full" />
               </div>
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5" />
-          Comments ({comments.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Add Comment Form */}
-        {user ? (
-          <form onSubmit={handleAddComment} className="space-y-4">
-            <div className="flex gap-3">
-              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                {user.profile?.avatar_url ? (
-                  <img src={user.profile.avatar_url} alt="Your avatar" className="w-10 h-10 rounded-full object-cover" />
-                ) : (
-                  <User className="h-5 w-5 text-gray-500" />
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium mb-2">
-                  {user.profile?.first_name} {user.profile?.last_name}
-                </p>
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
-                  className="w-full border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px] resize-none rounded-md"
-                  rows={3}
-                />
-                <div className="flex justify-end mt-2">
-                  <Button type="submit" size="sm" disabled={!newComment.trim() || submitting}>
-                    {submitting ? 'Posting...' : 'Comment'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </form>
-        ) : (
-          <div className="text-center py-4 text-muted-foreground">Please log in to add comments.</div>
-        )}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <MessageCircle className="h-5 w-5 text-muted-foreground" />
+        <h3 className="text-lg font-semibold">Comments</h3>
+        <Badge variant="secondary" className="text-xs">
+          {comments.length}
+        </Badge>
+      </div>
 
-        {/* Comments List */}
-        <div className="space-y-6">
-          {comments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No comments yet. Be the first to comment!</div>
-          ) : (
-            comments.map((comment) => <CommentItem key={comment.id} comment={comment} onDelete={handleDeleteComment} techniqueId={techniqueId} />)
-          )}
+      <Separator />
+
+      {/* Add Comment Form */}
+      {user ? (
+        <div className="space-y-4">
+          {profile && <UserProfileDisplay user={profile} size="md" showMusicPlayer={true} showUsername={true} showBelt={true} linkToProfile={true} />}
+          <div className="space-y-3 mt-3">
+            <form onSubmit={handleAddComment} className="space-y-3">
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Share your thoughts about this technique..."
+                className="min-h-[100px] resize-none"
+                disabled={submitting}
+              />
+              <div className="flex justify-end">
+                <Button type="submit" disabled={!newComment.trim() || submitting} className="px-8">
+                  {submitting ? 'Posting...' : 'Post Comment'}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      ) : (
+        <div className="text-center py-8 text-muted-foreground">
+          <MessageCircle className="h-8 w-8 mx-auto mb-3 opacity-50" />
+          <p>Please log in to add comments and join the discussion.</p>
+        </div>
+      )}
+
+      <Separator />
+
+      {/* Comments List */}
+      <div className="space-y-6">
+        {comments.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <h4 className="text-lg font-medium mb-2">No comments yet</h4>
+            <p>Be the first to share your thoughts about this technique!</p>
+          </div>
+        ) : (
+          comments.map((comment) => <CommentItem key={comment.id} comment={comment} onDelete={handleDeleteComment} />)
+        )}
+      </div>
+    </div>
   );
 }
 
 interface CommentItemProps {
   comment: Comment;
   onDelete: (commentId: string) => void;
-  techniqueId: string;
 }
 
-function CommentItem({ comment, onDelete, techniqueId }: CommentItemProps) {
-  const { user } = useAuth();
+function CommentItem({ comment, onDelete }: CommentItemProps) {
+  const { user, profile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [isReplying, setIsReplying] = useState(false);
@@ -234,50 +278,75 @@ function CommentItem({ comment, onDelete, techniqueId }: CommentItemProps) {
   const [showReplies, setShowReplies] = useState(false);
   const [replyCount, setReplyCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    fetchReplyCount();
-  }, [comment.id]);
+  // Memoize the profile display to prevent re-renders on every keystroke
+  const profileDisplay = useMemo(() => {
+    if (!comment.profile) return null;
+    return <UserProfileDisplay user={comment.profile} size="md" showMusicPlayer={true} showUsername={true} showBelt={true} linkToProfile={true} />;
+  }, [comment.profile]);
 
-  const fetchReplyCount = async () => {
+  const fetchReplyCount = useCallback(async () => {
     try {
+      console.log('Fetching reply count for comment:', comment.id);
       const { count } = await supabase.from('replies').select('*', { count: 'exact', head: true }).eq('comment_id', comment.id);
 
+      console.log('Reply count:', count);
       setReplyCount(count || 0);
     } catch (error) {
       console.error('Error fetching reply count:', error);
     }
-  };
+  }, [comment.id]);
+
+  useEffect(() => {
+    if (comment.id) {
+      fetchReplyCount();
+    }
+  }, [comment.id, fetchReplyCount]);
 
   const fetchReplies = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('Fetching replies for comment:', comment.id);
+
+      // OPTIMIZED: Fetch replies with profiles in a single join query
+      const { data: repliesData, error } = await supabase
         .from('replies')
         .select(
           `
           *,
-          profiles:user_id (
-            id,
-            first_name,
-            last_name,
-            belt_level,
-            avatar_url
+          profiles!inner(
+            id, first_name, last_name, belt_level, avatar_url, username, spotify_id
           )
         `
         )
         .eq('comment_id', comment.id)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching replies with profiles:', error);
+        throw error;
+      }
 
-      setReplies(data || []);
+      console.log('Replies with profiles fetched (optimized):', repliesData?.length || 0);
+
+      // Map the joined data to the expected format
+      const repliesWithProfiles =
+        repliesData?.map((reply) => ({
+          ...reply,
+          profile: reply.profiles,
+        })) || [];
+
+      setReplies(repliesWithProfiles);
     } catch (error) {
-      console.error('Error fetching replies:', error);
+      console.error('Error in fetchReplies:', error);
+      setReplies([]);
     }
   };
 
   const handleUpdateComment = async () => {
     if (!editContent.trim()) return;
+
+    setUpdating(true);
 
     try {
       const { error } = await supabase.from('comments').update({ content: editContent.trim() }).eq('id', comment.id);
@@ -289,57 +358,88 @@ function CommentItem({ comment, onDelete, techniqueId }: CommentItemProps) {
     } catch (error) {
       console.error('Error updating comment:', error);
       alert('Failed to update comment');
+    } finally {
+      setUpdating(false);
     }
   };
 
   const handleAddReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyContent.trim() || !user) return;
+    if (!replyContent.trim() || !user) {
+      console.log('Reply submission cancelled: missing content or user');
+      return;
+    }
 
+    console.log('Starting reply submission...');
     setSubmitting(true);
 
     try {
-      const { data, error } = await supabase
+      console.log('Checking authentication state...');
+      // Check current authentication state
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      console.log('Session data:', session?.user?.id ? 'User authenticated' : 'No session');
+
+      if (!session?.user) {
+        throw new Error('No authenticated session found');
+      }
+
+      console.log('Inserting reply into database...');
+      // First, try simple insert without the complex select
+      const { data: insertData, error: insertError } = await supabase
         .from('replies')
         .insert({
           content: replyContent.trim(),
-          user_id: user.id,
+          user_id: session.user.id,
           comment_id: comment.id,
         })
-        .select(
-          `
-          *,
-          profiles:user_id (
-            id,
-            first_name,
-            last_name,
-            belt_level,
-            avatar_url
-          )
-        `
-        )
+        .select('*')
         .single();
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
+      }
+
+      console.log('Reply inserted successfully, fetching profile data...');
+      // Then fetch the profile data separately
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, belt_level, avatar_url, username, spotify_id')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        console.warn('Could not fetch profile data:', profileError);
+      }
+
+      console.log('Combining data and updating state...');
+      // Combine the data
+      const data = {
+        ...insertData,
+        profile: profileData || null,
+      };
 
       setReplies((prev) => [...prev, data]);
       setReplyContent('');
       setIsReplying(false);
       setShowReplies(true);
       setReplyCount((prev) => prev + 1);
+      console.log('Reply added successfully!');
     } catch (error) {
       console.error('Error adding reply:', error);
-      alert('Failed to add reply');
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to add reply: ${errorMessage}`);
     } finally {
+      console.log('Resetting submitting state...');
       setSubmitting(false);
     }
   };
 
   const handleDeleteReply = async (replyId: string) => {
-    if (!window.confirm('Are you sure you want to delete this reply?')) {
-      return;
-    }
-
     try {
       const { error } = await supabase.from('replies').delete().eq('id', replyId);
 
@@ -347,137 +447,185 @@ function CommentItem({ comment, onDelete, techniqueId }: CommentItemProps) {
 
       setReplies((prev) => prev.filter((r) => r.id !== replyId));
       setReplyCount((prev) => prev - 1);
+
+      // If this was the last reply, close the replies section
+      if (replyCount <= 1) {
+        setShowReplies(false);
+      }
     } catch (error) {
       console.error('Error deleting reply:', error);
       alert('Failed to delete reply');
     }
   };
 
+  const handleUpdateReply = async (replyId: string, newContent: string) => {
+    console.log('Updating reply in CommentItem:', replyId, newContent);
+
+    // Update the local replies state
+    setReplies((prev) => prev.map((reply) => (reply.id === replyId ? { ...reply, content: newContent } : reply)));
+  };
+
   const isOwner = user && user.id === comment.user_id;
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
-    <div className="space-y-3">
-      <div className="flex gap-3">
-        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-          {comment.profile?.avatar_url ? (
-            <img src={comment.profile.avatar_url} alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
-          ) : (
-            <User className="h-5 w-5 text-gray-500" />
-          )}
-        </div>
-
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-sm">
-                {comment.profile?.first_name} {comment.profile?.last_name}
-              </p>
-              <p className="text-xs text-muted-foreground">{new Date(comment.created_at).toLocaleDateString()}</p>
-            </div>
-
-            {isOwner && (
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={() => setIsEditing(!isEditing)}>
-                  <Edit3 className="h-3 w-3" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => onDelete(comment.id)}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
+    <div className="space-y-4">
+      <div className="space-y-3">
+        {/* User Profile Display and Actions Row */}
+        <div className="flex justify-between items-start">
+          <div className="flex gap-3">
+            {profileDisplay}
+            <span className="text-xs text-muted-foreground mt-1">{formatDate(comment.created_at)}</span>
           </div>
 
-          {isEditing ? (
-            <div className="space-y-2">
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="w-full border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[60px] resize-none rounded-md"
-                rows={2}
-              />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleUpdateComment}>
-                  Save
+          {/* Actions */}
+          <div className="flex items-center gap-1">
+            {isOwner && (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(!isEditing)} className="h-8 w-8 p-0">
+                  <Edit3 className="h-4 w-4" />
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Delete Comment</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">Are you sure you want to delete this comment? This action cannot be undone.</p>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => {}}>
+                          Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={() => onDelete(comment.id)}>
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Comment Content */}
+        <div className="space-y-3">
+          {/* Content */}
+          {isEditing ? (
+            <div className="space-y-3">
+              <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="min-h-[80px] resize-none" disabled={updating} />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleUpdateComment} disabled={!editContent.trim() || updating}>
+                  {updating ? 'Saving...' : 'Save'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditContent(comment.content);
+                    setIsEditing(false);
+                  }}
+                  disabled={updating}
+                >
                   Cancel
                 </Button>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-gray-700">{comment.content}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{comment.content}</p>
           )}
 
-          {/* Reply Actions */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <Button variant="ghost" size="sm" onClick={() => setIsReplying(!isReplying)} className="p-0 h-auto text-xs hover:text-foreground">
-              <Reply className="h-3 w-3 mr-1" />
+          {/* Actions Bar */}
+          <div className="flex items-center gap-4 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setIsReplying(!isReplying)} className="h-8 px-2 text-muted-foreground hover:text-foreground">
+              <Reply className="h-4 w-4 mr-1" />
               Reply
             </Button>
 
-            {replyCount > 0 && !showReplies && (
+            {replyCount > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setShowReplies(true);
-                  fetchReplies();
+                  console.log('View Replies clicked. Current state:', { showReplies, repliesLength: replies.length, replyCount });
+                  setShowReplies(!showReplies);
+                  if (!showReplies && replies.length === 0) {
+                    console.log('Fetching replies...');
+                    fetchReplies();
+                  }
                 }}
-                className="p-0 h-auto text-xs hover:text-foreground"
+                className="h-8 px-2 text-muted-foreground hover:text-foreground"
               >
-                View {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
-              </Button>
-            )}
-
-            {showReplies && replyCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={() => setShowReplies(false)} className="p-0 h-auto text-xs hover:text-foreground">
-                Hide replies
+                {showReplies ? 'Hide' : 'View'} {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
               </Button>
             )}
           </div>
 
           {/* Reply Form */}
           {isReplying && user && (
-            <form onSubmit={handleAddReply} className="mt-3">
-              <div className="flex gap-2">
-                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                  {user.profile?.avatar_url ? (
-                    <img src={user.profile.avatar_url} alt="Your avatar" className="w-8 h-8 rounded-full object-cover" />
-                  ) : (
-                    <User className="h-4 w-4 text-gray-500" />
-                  )}
-                </div>
-                <div className="flex-1 space-y-2">
-                  <textarea
+            <div className="pt-4 space-y-3">
+              {profile && <UserProfileDisplay user={profile} size="md" showMusicPlayer={false} showUsername={false} showBelt={false} linkToProfile={false} />}
+              <div>
+                <form onSubmit={handleAddReply} className="space-y-3">
+                  <Textarea
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
-                    placeholder="Add a reply..."
-                    className="w-full border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[60px] resize-none rounded-md"
-                    rows={2}
+                    placeholder="Write a reply..."
+                    className="min-h-[80px] resize-none"
+                    disabled={submitting}
                   />
                   <div className="flex gap-2">
                     <Button type="submit" size="sm" disabled={!replyContent.trim() || submitting}>
-                      {submitting ? 'Posting...' : 'Reply'}
+                      {submitting ? 'Posting...' : 'Post Reply'}
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setIsReplying(false)}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsReplying(false);
+                        setReplyContent('');
+                      }}
+                      disabled={submitting}
+                    >
                       Cancel
                     </Button>
                   </div>
-                </div>
+                </form>
               </div>
-            </form>
+            </div>
           )}
 
           {/* Replies */}
-          {showReplies && replies.length > 0 && (
-            <div className="ml-4 pl-4 border-l-2 border-gray-200 space-y-3 mt-3">
-              {replies.map((reply) => (
-                <ReplyItem key={reply.id} reply={reply} onDelete={handleDeleteReply} />
-              ))}
+          {showReplies && (
+            <div className="pt-4 pl-8 border-l-2 border-muted space-y-4">
+              {replies.length > 0 ? (
+                replies.map((reply) => <ReplyItem key={reply.id} reply={reply} onDelete={handleDeleteReply} onUpdate={handleUpdateReply} />)
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p>No replies yet</p>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      <Separator />
     </div>
   );
 }
@@ -485,39 +633,133 @@ function CommentItem({ comment, onDelete, techniqueId }: CommentItemProps) {
 interface ReplyItemProps {
   reply: Reply;
   onDelete: (replyId: string) => void;
+  onUpdate: (replyId: string, newContent: string) => void;
 }
 
-function ReplyItem({ reply, onDelete }: ReplyItemProps) {
+function ReplyItem({ reply, onDelete, onUpdate }: ReplyItemProps) {
   const { user } = useAuth();
   const isOwner = user && user.id === reply.user_id;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(reply.content);
+  const [updating, setUpdating] = useState(false);
+
+  // Memoize the profile display to prevent re-renders on every keystroke
+  const profileDisplay = useMemo(() => {
+    if (!reply.profile) return null;
+    return <UserProfileDisplay user={reply.profile} size="md" showMusicPlayer={true} showUsername={true} showBelt={true} linkToProfile={true} />;
+  }, [reply.profile]);
+
+  const handleUpdateReply = async () => {
+    if (!editContent.trim()) return;
+
+    console.log('Starting reply update for reply:', reply.id);
+    setUpdating(true);
+
+    try {
+      console.log('Updating reply content to:', editContent.trim());
+
+      const { data, error } = await supabase.from('replies').update({ content: editContent.trim() }).eq('id', reply.id).select('*').single();
+
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
+      }
+
+      console.log('Reply updated successfully:', data);
+
+      // Call the onUpdate callback to refresh the parent component
+      onUpdate(reply.id, editContent.trim());
+      setIsEditing(false);
+
+      console.log('Reply update completed successfully');
+    } catch (error) {
+      console.error('Error updating reply:', error);
+      alert('Failed to update reply. Please try again.');
+    } finally {
+      console.log('Setting updating to false');
+      setUpdating(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
-    <div className="flex gap-2">
-      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-        {reply.profile?.avatar_url ? (
-          <img src={reply.profile.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
-        ) : (
-          <User className="h-4 w-4 text-gray-500" />
+    <div className="space-y-3">
+      {/* User Profile Display and Actions Row */}
+      <div className="flex justify-between items-start">
+        <div className="flex items-center gap-3">
+          {profileDisplay}
+          <span className="text-xs text-muted-foreground">{formatDate(reply.created_at)}</span>
+        </div>
+
+        {/* Actions */}
+        {isOwner && (
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground">
+              <Edit3 className="h-3 w-3" />
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive hover:text-destructive">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Reply</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Are you sure you want to delete this reply? This action cannot be undone.</p>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => {}}>
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={() => onDelete(reply.id)}>
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
       </div>
 
-      <div className="flex-1">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-xs">
-              {reply.profile?.first_name} {reply.profile?.last_name}
-            </p>
-            <p className="text-xs text-muted-foreground">{new Date(reply.created_at).toLocaleDateString()}</p>
+      {/* Reply Content */}
+      <div className="space-y-2">
+        {/* Edit Form or Reply Text */}
+        {isEditing ? (
+          <div className="space-y-3">
+            <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="min-h-[80px] resize-none" disabled={updating} />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleUpdateReply} disabled={!editContent.trim() || updating}>
+                {updating ? 'Saving...' : 'Save'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditContent(reply.content);
+                  setIsEditing(false);
+                }}
+                disabled={updating}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
-
-          {isOwner && (
-            <Button variant="ghost" size="sm" onClick={() => onDelete(reply.id)}>
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
-
-        <p className="text-sm text-gray-700 mt-1">{reply.content}</p>
+        ) : (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{reply.content}</p>
+        )}
       </div>
     </div>
   );

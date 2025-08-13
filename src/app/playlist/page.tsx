@@ -57,6 +57,7 @@ interface Technique {
   position: string;
   mux_playback_id: string;
   thumbnail_time?: number;
+  thumbnail_url?: string;
   created_date: string;
 }
 
@@ -112,8 +113,9 @@ export default function PlaylistPage() {
       // Fetch the techniques
       const { data: techniquesData, error: techniquesError } = await supabase
         .from('techniques')
-        .select('id, title, position, mux_playback_id, thumbnail_time, created_date')
-        .in('id', techniqueIds);
+        .select('id, title, position, mux_playback_id, thumbnail_time, thumbnail_url, created_date')
+        .in('id', techniqueIds)
+        .eq('status', 'published');
 
       if (techniquesError) {
         throw techniquesError;
@@ -312,9 +314,12 @@ export default function PlaylistPage() {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {paginatedPlaylist.map((item) => {
                     const technique = item.technique;
-                    const thumbnailUrl = `https://image.mux.com/${technique.mux_playback_id}/thumbnail.jpg?width=320${
-                      technique.thumbnail_time !== undefined && technique.thumbnail_time !== null ? `&time=${technique.thumbnail_time}` : ''
-                    }`;
+                    // Use custom thumbnail if available, otherwise use Mux thumbnail with timestamp
+                    const thumbnailUrl =
+                      technique.thumbnail_url ||
+                      `https://image.mux.com/${technique.mux_playback_id}/thumbnail.jpg?width=320${
+                        technique.thumbnail_time !== undefined && technique.thumbnail_time !== null ? `&time=${technique.thumbnail_time}` : ''
+                      }`;
 
                     return (
                       <div key={item.id} className="group relative">

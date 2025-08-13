@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -14,8 +14,15 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signIn } = useAuth();
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const { signIn, user } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (loginSuccess && user) {
+      router.push('/feed');
+    }
+  }, [loginSuccess, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,11 +31,34 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     setIsLoading(true);
     setError('');
 
+    // Add timeout to prevent hanging indefinitely
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Login request timed out after 30 seconds')), 30000);
+    });
+
     try {
-      await signIn(email, password);
-      router.push('/feed');
+      // Race between signIn and timeout
+      await Promise.race([signIn(email, password), timeoutPromise]);
+
+      setLoginSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during login');
+      let errorMessage = 'An error occurred during login';
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        // Handle common Supabase error messages
+        if (err.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (err.message.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and click the confirmation link before logging in.';
+        } else if (err.message.includes('Too many requests')) {
+          errorMessage = 'Too many login attempts. Please wait a moment and try again.';
+        } else if (err.message.includes('timeout')) {
+          errorMessage = 'Login request timed out. Please check your internet connection and try again.';
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -79,12 +109,6 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               Don&apos;t have an account?{' '}
               <a href="/register" className="underline underline-offset-4">
                 Sign up
-              </a>
-            </div>
-
-            <div className="mt-2 text-center text-sm">
-              <a href="/feed" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                View Demo Dashboard
               </a>
             </div>
           </form>

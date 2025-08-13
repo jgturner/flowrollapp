@@ -215,7 +215,7 @@ export default function CompetitionDetailPage() {
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-3xl font-bold">{competition.event_name}</CardTitle>
+              <CardTitle className="font-bold">{competition.event_name}</CardTitle>
               <CardDescription className="flex items-center gap-2 mt-2">
                 <Calendar className="h-4 w-4" />
                 {formatDate(new Date(competition.competition_date), 'MMMM dd, yyyy')}
@@ -224,11 +224,21 @@ export default function CompetitionDetailPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleEdit}>
+              <Button
+                variant="outline"
+                onClick={competition.status === 'withdrew' ? undefined : handleEdit}
+                disabled={competition.status === 'withdrew'}
+                title={competition.status === 'withdrew' ? 'Cannot edit a withdrawn competition' : ''}
+              >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </Button>
-              <Button variant="destructive" onClick={() => setShowConfirm(true)} disabled={deleting}>
+              <Button
+                variant="destructive"
+                onClick={competition.status === 'withdrew' ? undefined : () => setShowConfirm(true)}
+                disabled={competition.status === 'withdrew' || deleting}
+                title={competition.status === 'withdrew' ? 'Cannot delete a withdrawn competition' : ''}
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 {deleting ? 'Deleting...' : 'Delete'}
               </Button>
@@ -243,19 +253,19 @@ export default function CompetitionDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <div className="font-semibold text-sm text-muted-foreground">Status</div>
+                    <div className="font-semibold text-muted-foreground">Status</div>
                     <Badge className={`${getStatusBadge(competition.status).color} text-white`}>{getStatusBadge(competition.status).label}</Badge>
                   </div>
 
                   <div className="space-y-1">
-                    <div className="font-semibold text-sm text-muted-foreground">Match Type</div>
-                    <div className="text-lg">{getMatchTypeLabel(competition.match_type)}</div>
+                    <div className="font-semibold text-muted-foreground">Match Type</div>
+                    <div>{getMatchTypeLabel(competition.match_type)}</div>
                   </div>
 
                   {(competition.match_type === 'tournament' || competition.match_type === 'tournament_team') && competition.placement && (
                     <div className="space-y-1">
-                      <div className="font-semibold text-sm text-muted-foreground">Placement</div>
-                      <div className="flex items-center gap-2 text-lg">
+                      <div className="font-semibold text-muted-foreground">Placement</div>
+                      <div className="flex items-center gap-2">
                         {getPlacementIcon(competition.placement)}
                         {getPlacementText(competition.placement)}
                       </div>
@@ -264,8 +274,8 @@ export default function CompetitionDetailPage() {
 
                   {(competition.match_type === 'single' || competition.match_type === 'single_team') && competition.result && (
                     <div className="space-y-1">
-                      <div className="font-semibold text-sm text-muted-foreground">Result</div>
-                      <div className="text-lg capitalize font-semibold">
+                      <div className="font-semibold text-muted-foreground">Result</div>
+                      <div className="capitalize font-semibold">
                         {competition.result === 'win' ? <span className="text-green-600">Win</span> : <span className="text-red-600">Loss</span>}
                       </div>
                     </div>
@@ -274,20 +284,20 @@ export default function CompetitionDetailPage() {
 
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <div className="font-semibold text-sm text-muted-foreground">Event Name</div>
-                    <div className="text-lg">{competition.event_name}</div>
+                    <div className="font-semibold text-muted-foreground">Event Name</div>
+                    <div>{competition.event_name}</div>
                   </div>
 
                   <div className="space-y-1">
-                    <div className="font-semibold text-sm text-muted-foreground">Location</div>
-                    <div className="text-lg">
+                    <div className="font-semibold text-muted-foreground">Location</div>
+                    <div>
                       {competition.city}, {competition.state}, {competition.country}
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <div className="font-semibold text-sm text-muted-foreground">Date</div>
-                    <div className="text-lg">{formatDate(new Date(competition.competition_date), 'MMMM dd, yyyy')}</div>
+                    <div className="font-semibold text-muted-foreground">Date</div>
+                    <div>{formatDate(new Date(competition.competition_date), 'MMMM dd, yyyy')}</div>
                   </div>
                 </div>
               </div>
@@ -307,7 +317,11 @@ export default function CompetitionDetailPage() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Competitions
             </Button>
-            <Button onClick={handleEdit}>
+            <Button
+              onClick={competition.status === 'withdrew' ? undefined : handleEdit}
+              disabled={competition.status === 'withdrew'}
+              title={competition.status === 'withdrew' ? 'Cannot edit a withdrawn competition' : ''}
+            >
               <Edit className="mr-2 h-4 w-4" />
               Edit Competition
             </Button>

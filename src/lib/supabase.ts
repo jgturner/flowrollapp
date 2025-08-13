@@ -3,6 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing required Supabase environment variables');
+}
+
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export type Database = {
@@ -16,6 +20,7 @@ export type Database = {
           belt_level: 'White' | 'Blue' | 'Purple' | 'Brown' | 'Black' | null;
           height: number | null;
           weight: number | null;
+          weight_lbs: number | null;
           date_of_birth: string | null;
           avatar_url: string | null;
           instagram_url: string | null;
@@ -31,6 +36,11 @@ export type Database = {
           public_show_videos: boolean | null;
           belt_verified: boolean | null;
           belt_verified_by: string | null;
+          username: string | null;
+          gender: string | null;
+          competition_status: string | null;
+          competition_range: string | null;
+          country: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -41,6 +51,7 @@ export type Database = {
           belt_level?: 'White' | 'Blue' | 'Purple' | 'Brown' | 'Black' | null;
           height?: number | null;
           weight?: number | null;
+          weight_lbs?: number | null;
           date_of_birth?: string | null;
           avatar_url?: string | null;
           instagram_url?: string | null;
@@ -56,6 +67,11 @@ export type Database = {
           public_show_videos?: boolean | null;
           belt_verified?: boolean | null;
           belt_verified_by?: string | null;
+          username?: string | null;
+          gender?: string | null;
+          competition_status?: string | null;
+          competition_range?: string | null;
+          country?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -66,6 +82,7 @@ export type Database = {
           belt_level?: 'White' | 'Blue' | 'Purple' | 'Brown' | 'Black' | null;
           height?: number | null;
           weight?: number | null;
+          weight_lbs?: number | null;
           date_of_birth?: string | null;
           avatar_url?: string | null;
           instagram_url?: string | null;
@@ -81,6 +98,11 @@ export type Database = {
           public_show_videos?: boolean | null;
           belt_verified?: boolean | null;
           belt_verified_by?: string | null;
+          username?: string | null;
+          gender?: string | null;
+          competition_status?: string | null;
+          competition_range?: string | null;
+          country?: string | null;
           created_at?: string;
           updated_at?: string;
         };

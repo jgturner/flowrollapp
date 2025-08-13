@@ -77,45 +77,36 @@ export default function FeedPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch recent technique videos (techniques) with profile data
-      const { data: techniques, error: techniquesError } = await supabase
-        .from('techniques')
-        .select(
-          `
-          *,
-          profiles:user_id (
-            id,
-            first_name,
-            last_name,
-            belt_level,
-            avatar_url
-          )
-        `
-        )
-        .order('created_date', { ascending: false })
-        .limit(10);
+      // Fetch recent technique videos (techniques) without join
+      const { data: techniques, error: techniquesError } = await supabase.from('techniques').select('*').order('created_date', { ascending: false }).limit(10);
 
       if (techniquesError) {
         console.error('Error fetching techniques:', techniquesError);
       }
 
-      // Transform techniques data for feed
-      if (techniques) {
+      if (techniques && techniques.length > 0) {
+        // Fetch all unique user_ids
+        const userIds = [...new Set(techniques.map((t) => t.user_id).filter(Boolean))];
+        type ProfileType = FeedPost['profile'];
+        let profilesMap: Record<string, ProfileType> = {};
+        if (userIds.length > 0) {
+          const { data: profiles, error: profilesError } = await supabase.from('profiles').select('id, first_name, last_name, belt_level, avatar_url').in('id', userIds);
+          if (!profilesError && profiles) {
+            profilesMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
+          }
+        }
         const transformedPosts: FeedPost[] = await Promise.all(
           techniques.map(async (technique) => {
             // Get likes count
             const { count: likesCount } = await supabase.from('likes').select('*', { count: 'exact', head: true }).eq('technique_id', technique.id);
-
             // Get comments count
             const { count: commentsCount } = await supabase.from('comments').select('*', { count: 'exact', head: true }).eq('technique_id', technique.id);
-
             // Check if current user liked this
             let isLiked = false;
             if (user) {
               const { data: likeData } = await supabase.from('likes').select('id').eq('technique_id', technique.id).eq('user_id', user.id).single();
               isLiked = !!likeData;
             }
-
             return {
               id: technique.id,
               title: technique.title,
@@ -125,7 +116,7 @@ export default function FeedPage() {
               mux_playback_id: technique.mux_playback_id,
               thumbnail_time: technique.thumbnail_time,
               user_id: technique.user_id,
-              profile: technique.profiles,
+              profile: profilesMap[technique.user_id] || null,
               likes_count: likesCount || 0,
               comments_count: commentsCount || 0,
               is_liked: isLiked,
@@ -133,6 +124,8 @@ export default function FeedPage() {
           })
         );
         setFeedPosts(transformedPosts);
+      } else {
+        setFeedPosts([]);
       }
     } catch (err) {
       console.error('Error fetching feed data:', err);

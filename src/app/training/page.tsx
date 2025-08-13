@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
+import { getAISummary } from '@/lib/ai-summary-cache';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,7 +71,7 @@ interface TrainingSession {
 }
 
 export default function TrainingPage() {
-  const { user } = useAuth();
+  const { user, userPlusSubscription } = useAuth();
   const router = useRouter();
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,6 +84,11 @@ export default function TrainingPage() {
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [toDate, setToDate] = useState<Date | undefined>(undefined);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+
+  // Add state for XAI summary
+  const [xaiSummary, setXaiSummary] = useState<string | null>(null);
+  const [xaiLoading, setXaiLoading] = useState(false);
+  const [xaiError, setXaiError] = useState<string | null>(null);
 
   const lastSessionRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -151,6 +157,29 @@ export default function TrainingPage() {
 
     if (hasMore) fetchSessions();
   }, [page, user, hasMore]);
+
+  // Fetch XAI summary when sessions change with caching
+  useEffect(() => {
+    if (!user || loading || sessions.length === 0 || !userPlusSubscription) {
+      setXaiSummary(null);
+      setXaiError(null);
+      setXaiLoading(false);
+      return;
+    }
+
+    setXaiLoading(true);
+    setXaiError(null);
+
+    getAISummary(user.id, 'training', sessions)
+      .then((result) => {
+        setXaiSummary(result.summary);
+        setXaiError(result.error);
+      })
+      .finally(() => {
+        setXaiLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading, fromDate, toDate, selectedCategory, sessions.length, userPlusSubscription]);
 
   const breadcrumbs = [
     { label: 'Dashboard', href: '/feed' },
@@ -340,6 +369,19 @@ export default function TrainingPage() {
                 </div>
               </div>
             </div>
+            {/* XAI Summary Section or Upgrade Banner */}
+            <div className="mb-6">
+              {!userPlusSubscription && (
+                <Card>
+                  <CardContent className="flex flex-col items-center">
+                    <div className="mb-2 text-center">Upgrade to User+ to unlock AI-powered training summaries and recommendations!</div>
+                    <Button onClick={() => router.push('/subscriptions')} variant="default">
+                      View Subscription Options
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
             <div className="text-center text-muted-foreground py-8">
               {hasActiveFilters ? 'No training sessions found for the selected filters.' : 'No training sessions yet. Create your first training log!'}
             </div>
@@ -428,6 +470,30 @@ export default function TrainingPage() {
               </div>
             </div>
           </div>
+          {/* XAI Summary Section */}
+          <div className="mb-6">
+            {userPlusSubscription ? (
+              <>
+                {xaiLoading && <Skeleton className="h-6 w-full mb-2" />}
+                {xaiError && <div className="text-red-500 text-sm mb-2">{xaiError}</div>}
+                {xaiSummary && !xaiLoading && !xaiError && (
+                  <div className="p-4  rounded-lg border text-base">
+                    <strong>Training Summary & Recommendation:</strong>
+                    <div className="mt-1">{xaiSummary}</div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center">
+                  <div className="mb-2 text-center">Upgrade to User+ to unlock AI-powered training summaries and recommendations!</div>
+                  <Button onClick={() => router.push('/subscriptions')} variant="default">
+                    View Subscription Options
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
           <div className="space-y-1">
             {sessions.map((session, index) => {
               const isLast = index === sessions.length - 1;
@@ -466,10 +532,8 @@ export default function TrainingPage() {
                   {session.sparring && (
                     <div className="flex flex-wrap gap-2 text-xs">
                       <span className="font-medium">Sparring:</span>
-                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full dark:bg-gray-800 dark:text-gray-300">Rounds: {session.rounds}</span>
-                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full dark:bg-gray-800 dark:text-gray-300">
-                        Minutes/Round: {session.minutes_per_round}
-                      </span>
+                      <span className="bg-white text-black px-2 py-1 rounded-full">Rounds: {session.rounds}</span>
+                      <span className="bg-white text-black px-2 py-1 rounded-full">Minutes/Round: {session.minutes_per_round}</span>
                     </div>
                   )}
                 </div>

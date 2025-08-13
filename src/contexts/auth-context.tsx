@@ -12,6 +12,9 @@ interface AuthContextType {
   loading: boolean;
   isSpotifyPlaying: boolean;
   profileSpotifyPlaying: { isPlaying: boolean; spotifyId: string | null };
+  userPlusSubscription: boolean;
+  eventPlusSubscription: boolean;
+  gymEventPlusSubscription: boolean;
   signUp: (email: string, password: string, userData: Omit<import('@/lib/auth').RegistrationData, 'email' | 'password'>) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -44,6 +47,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isPlaying: false,
     spotifyId: null,
   });
+  const [userPlusSubscription, setUserPlusSubscription] = useState(false);
+  const [eventPlusSubscription, setEventPlusSubscription] = useState(false);
+  const [gymEventPlusSubscription, setGymEventPlusSubscription] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -83,6 +89,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Check for user+ and event+ and gym event+ subscriptions
+  useEffect(() => {
+    const checkSubscriptions = async () => {
+      if (!user) {
+        setUserPlusSubscription(false);
+        setEventPlusSubscription(false);
+        setGymEventPlusSubscription(false);
+        return;
+      }
+      try {
+        // OPTIMIZED: Single query to get all active subscriptions
+        const { data: subscriptions, error } = await supabase.from('subscriptions').select('tier').eq('user_id', user.id).eq('status', 'active');
+
+        if (error) {
+          console.error('Error checking subscriptions:', error);
+          setUserPlusSubscription(false);
+          setEventPlusSubscription(false);
+          setGymEventPlusSubscription(false);
+          return;
+        }
+
+        const tiers = subscriptions?.map((sub) => sub.tier) || [];
+
+        // User+ features: any active subscription (user+ or events+)
+        setUserPlusSubscription(tiers.includes('user+') || tiers.includes('events+'));
+
+        // Event+ features: events+ subscription
+        setEventPlusSubscription(tiers.includes('events+'));
+
+        // Gym+ features: events+ subscription (same as event+ for now)
+        setGymEventPlusSubscription(tiers.includes('events+'));
+
+        // Log subscription status for debugging
+        console.log('Subscription check results (optimized):', {
+          tiers,
+          userPlus: tiers.includes('user+') || tiers.includes('events+'),
+          eventPlus: tiers.includes('events+'),
+          gymEventPlus: tiers.includes('events+'),
+          userId: user.id,
+        });
+      } catch (error) {
+        console.error('Error checking subscriptions:', error);
+        // Set all to false on error to prevent access issues
+        setUserPlusSubscription(false);
+        setEventPlusSubscription(false);
+        setGymEventPlusSubscription(false);
+      }
+    };
+    checkSubscriptions();
+  }, [user]);
 
   const signUp = async (email: string, password: string, userData: Omit<import('@/lib/auth').RegistrationData, 'email' | 'password'>) => {
     const { user } = await authService.register({
@@ -181,6 +238,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     isSpotifyPlaying,
     profileSpotifyPlaying,
+    userPlusSubscription,
+    eventPlusSubscription,
+    gymEventPlusSubscription,
     signUp,
     signIn,
     signOut,

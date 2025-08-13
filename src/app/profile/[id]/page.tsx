@@ -33,6 +33,7 @@ import {
 import { BsTwitterX } from 'react-icons/bs';
 import Image from 'next/image';
 import { format as formatDate } from 'date-fns';
+import * as FlagIcons from 'country-flag-icons/react/3x2';
 
 interface ProfileData {
   id: string;
@@ -57,6 +58,9 @@ interface ProfileData {
   public_show_videos: boolean | null;
   belt_verified: boolean | null;
   belt_verified_by: string | null;
+  competition_status: 'Active' | 'Tournaments Only' | 'Super Fights Only' | 'Training Only' | 'Injury/InActive' | null;
+  competition_range: 'International' | 'Country' | 'State/Province/Region' | 'Local (City/Town)' | null;
+  country: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -83,6 +87,7 @@ interface Technique {
   created_date: string;
   mux_playback_id: string | null;
   thumbnail_time: number | null;
+  thumbnail_url: string | null;
 }
 
 export default function ProfilePage() {
@@ -181,6 +186,7 @@ export default function ProfilePage() {
           .from('techniques')
           .select('*')
           .eq('user_id', profileId)
+          .eq('status', 'published')
           .order('created_date', { ascending: false })
           .limit(10);
 
@@ -266,6 +272,41 @@ export default function ProfilePage() {
     return 'U';
   };
 
+  const getCompetitionStatusColor = (status: string | null) => {
+    switch (status) {
+      case 'Active':
+      case 'Tournaments Only':
+      case 'Super Fights Only':
+        return 'bg-green-500';
+      case 'Training Only':
+        return 'bg-yellow-500';
+      case 'Injury/InActive':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-400';
+    }
+  };
+
+  const getCompetitionStatusTextColor = (status: string | null) => {
+    switch (status) {
+      case 'Active':
+      case 'Tournaments Only':
+      case 'Super Fights Only':
+        return 'text-green-600';
+      case 'Training Only':
+        return 'text-yellow-600';
+      case 'Injury/InActive':
+        return 'text-red-600';
+      default:
+        return 'text-gray-500';
+    }
+  };
+
+  const getFlagComponent = (countryCode: string) => {
+    const FlagComponent = (FlagIcons as Record<string, React.ComponentType<{ className?: string; title?: string }>>)[countryCode];
+    return FlagComponent ? FlagComponent : null;
+  };
+
   const getAvatarUrl = () => {
     if (!profile?.avatar_url) return null;
     return authService.getAvatarUrl(profile.avatar_url);
@@ -332,17 +373,17 @@ export default function ProfilePage() {
     <DashboardLayout breadcrumbs={breadcrumbs}>
       <div className="space-y-6">
         {/* Profile Header */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-2">
           <Card>
             <CardHeader>
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-4 flex-col sm:flex-row justify-center sm:justify-start">
                   <div className="relative">
-                    <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                    <div className="h-24 w-24 min-w-[96px] min-h-[96px] rounded-full bg-muted flex items-center justify-center overflow-hidden">
                       {getAvatarUrl() ? (
                         <Image src={getAvatarUrl()!} alt="Profile" width={96} height={96} className="object-cover w-full h-full" />
                       ) : (
-                        <span className="text-2xl font-medium">{getInitials()}</span>
+                        <span className="text-6xl font-medium">{getInitials()}</span>
                       )}
                     </div>
                     {profile.spotify_id && !isOwnProfile && (
@@ -364,9 +405,24 @@ export default function ProfilePage() {
                     )}
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold mb-[-5px]">{getDisplayName()}</h1>
+                    <div className="flex items-center gap-3">
+                      <h1 className="text-2xl font-bold mb-[-5px]">{getDisplayName()}</h1>
+                      {profile.country &&
+                        (() => {
+                          const FlagComponent = getFlagComponent(profile.country);
+                          return FlagComponent ? <FlagComponent className="w-8 h-6 object-cover rounded-sm" title={profile.country} /> : null;
+                        })()}
+                    </div>
                     {profile.username && <p className="text-muted-foreground">@{profile.username}</p>}
-                    {profile.belt_level && <Badge className={`mt-1 ${getBeltClass(profile.belt_level)}`}>{profile.belt_level} Belt</Badge>}
+                    <div className="flex items-center gap-2 mt-1">
+                      {profile.belt_level && <Badge className={getBeltClass(profile.belt_level)}>{profile.belt_level} Belt</Badge>}
+                      {profile.competition_status && (
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-2 h-2 rounded-full ${getCompetitionStatusColor(profile.competition_status)}`}></div>
+                          <span className={`text-sm font-medium ${getCompetitionStatusTextColor(profile.competition_status)}`}>{profile.competition_status}</span>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Social Media Links */}
                     <div className="flex items-center gap-4 mt-2">
@@ -471,9 +527,9 @@ export default function ProfilePage() {
           {/* Spotify Embed */}
           {profile.spotify_id && (
             <Card>
-              <CardHeader className="mb-[-20px]">
+              {/* <CardHeader className="mb-[-20px]">
                 <CardTitle className="text-lg">Current Anthem</CardTitle>
-              </CardHeader>
+              </CardHeader> */}
               <CardContent>
                 <iframe
                   style={{ borderRadius: '12px' }}
@@ -490,14 +546,40 @@ export default function ProfilePage() {
           )}
         </div>
 
+        {/* Competition Status */}
+        <Card>
+          <CardHeader className="mb-0">
+            <CardTitle className="text-lg mb-0">Competition Status</CardTitle>
+            <CardDescription className="mb-0">Current competition activity level and range</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <div className={`w-4 h-4 rounded-full ${getCompetitionStatusColor(profile.competition_status)}`}></div>
+              <span className={` font-medium ${getCompetitionStatusTextColor(profile.competition_status)}`}>
+                {profile.competition_status || 'Active'}
+                {profile.competition_range && ` / ${profile.competition_range}`}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              {profile.competition_status === 'Active' && 'Actively competing in all competition types'}
+              {profile.competition_status === 'Tournaments Only' && 'Only participating in tournament competitions'}
+              {profile.competition_status === 'Super Fights Only' && 'Only participating in super fight competitions'}
+              {profile.competition_status === 'Training Only' && 'Focused on training, not actively competing'}
+              {profile.competition_status === 'Injury/InActive' && 'Currently injured or inactive from competition'}
+              {!profile.competition_status && 'Actively competing in all competition types'}
+              {profile.competition_range && ` at ${profile.competition_range.toLowerCase()} level`}
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Stats and Info Grid */}
         <div className="grid gap-6 md:grid-cols-2">
           {/* Physical Stats */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Physical Stats</CardTitle>
+              <CardTitle className="text-lg mb-[-20px]">Physical Stats</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-1 pt-0">
               {profile.height && (
                 <div className="flex items-center gap-2">
                   <Ruler className="h-4 w-4 text-muted-foreground" />
@@ -521,10 +603,10 @@ export default function ProfilePage() {
 
           {/* Competition Stats */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Competition Stats</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg mb-[-40px]">Competition Stats</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-1 pt-0">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Total Competitions</span>
                 <Badge variant="outline">{competitionStats.total}</Badge>
@@ -624,9 +706,12 @@ export default function ProfilePage() {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {techniques.slice(0, 6).map((technique) => {
-                  const thumbnailUrl = `https://image.mux.com/${technique.mux_playback_id}/thumbnail.jpg?width=320${
-                    technique.thumbnail_time !== undefined && technique.thumbnail_time !== null ? `&time=${technique.thumbnail_time}` : ''
-                  }`;
+                  // Use custom thumbnail if available, otherwise use Mux thumbnail with timestamp
+                  const thumbnailUrl =
+                    technique.thumbnail_url ||
+                    `https://image.mux.com/${technique.mux_playback_id}/thumbnail.jpg?width=320${
+                      technique.thumbnail_time !== undefined && technique.thumbnail_time !== null ? `&time=${technique.thumbnail_time}` : ''
+                    }`;
 
                   return (
                     <div

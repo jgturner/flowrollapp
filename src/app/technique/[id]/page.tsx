@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
-import { authService } from '@/lib/auth';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,9 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, ListPlus, Share2, Edit3, Trash2, User } from 'lucide-react';
+import { Heart, ListPlus, Share2, Edit3, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Comments } from '@/components/comments';
 import { AdPlaceholder } from '@/components/ad-placeholder';
+import { UserProfileDisplay } from '@/components/user-profile-display';
 import MuxPlayer from '@mux/mux-player-react';
 
 const POSITION_OPTIONS = [
@@ -58,8 +58,10 @@ interface Profile {
   id: string;
   first_name: string | null;
   last_name: string | null;
+  username: string | null;
   belt_level: 'White' | 'Blue' | 'Purple' | 'Brown' | 'Black' | null;
   avatar_url: string | null;
+  spotify_id?: string | null;
 }
 
 interface Technique {
@@ -88,6 +90,7 @@ export default function TechniquePage() {
   const [isLiked, setIsLiked] = useState(false);
   const [isInPlaylist, setIsInPlaylist] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [editData, setEditData] = useState({
     title: '',
     description: '',
@@ -164,7 +167,7 @@ export default function TechniquePage() {
       if (techniqueData.user_id) {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, belt_level, avatar_url')
+          .select('id, first_name, last_name, username, belt_level, avatar_url, spotify_id')
           .eq('id', techniqueData.user_id)
           .single();
 
@@ -328,23 +331,6 @@ export default function TechniquePage() {
     }
   };
 
-  const getBeltClass = (beltLevel: string | null) => {
-    switch (beltLevel?.toLowerCase()) {
-      case 'white':
-        return 'bg-white text-black border border-black';
-      case 'blue':
-        return 'bg-blue-600 text-white';
-      case 'purple':
-        return 'bg-purple-700 text-white';
-      case 'brown':
-        return 'bg-yellow-900 text-white';
-      case 'black':
-        return 'bg-black text-red-600 border border-red-600';
-      default:
-        return 'bg-gray-600 text-white';
-    }
-  };
-
   const breadcrumbs = [
     { label: 'Videos', href: '/videos' },
     { label: technique?.title || 'Technique', isActive: true },
@@ -442,7 +428,7 @@ export default function TechniquePage() {
                   </div>
                   {isOwner && (
                     <Button type="button" variant="destructive" onClick={handleDelete}>
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4 mr-2 text-destructive-foreground" />
                       Delete
                     </Button>
                   )}
@@ -457,7 +443,7 @@ export default function TechniquePage() {
                     <p className="text-muted-foreground">{technique.position}</p>
                   </div>
                   {isOwner && (
-                    <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Button variant="outline" size="sm" onClick={() => router.push(`/videos/edit/${technique.id}`)}>
                       <Edit3 className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
@@ -465,42 +451,31 @@ export default function TechniquePage() {
                 </div>
 
                 {/* User Info */}
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                    {technique.profile?.avatar_url && authService.getAvatarUrl(technique.profile.avatar_url) ? (
-                      <img
-                        src={authService.getAvatarUrl(technique.profile.avatar_url)!}
-                        alt="Avatar"
-                        className="w-12 h-12 rounded-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <User className="h-6 w-6 text-gray-500" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {technique.profile?.first_name} {technique.profile?.last_name}
-                    </p>
-                    {technique.profile?.belt_level && (
-                      <span className={`inline-block px-2 py-1 text-xs rounded ${getBeltClass(technique.profile.belt_level)}`}>{technique.profile.belt_level}</span>
-                    )}
-                  </div>
-                </div>
+                {technique.profile && (
+                  <UserProfileDisplay user={technique.profile} size="md" showMusicPlayer={true} showUsername={true} showBelt={true} linkToProfile={true} />
+                )}
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-4 pt-4 border-t">
-                  <Button variant={isLiked ? 'default' : 'outline'} size="sm" onClick={handleLike} disabled={isProcessing}>
-                    <Heart className={`h-4 w-4 mr-2 ${isLiked ? 'fill-current' : ''}`} />
+                <div className="flex items-center gap-4 pt-4 border-t mt-4">
+                  <div
+                    onClick={!isProcessing ? handleLike : undefined}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors ${
+                      isLiked ? 'text-white' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                    } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <Heart className={`h-4 w-4 ${isLiked ? 'fill-white' : ''}`} />
                     {likeCount} {likeCount === 1 ? 'Like' : 'Likes'}
-                  </Button>
+                  </div>
 
-                  <Button variant={isInPlaylist ? 'default' : 'outline'} size="sm" onClick={handlePlaylist} disabled={isProcessing}>
-                    <ListPlus className="h-4 w-4 mr-2" />
+                  <div
+                    onClick={!isProcessing ? handlePlaylist : undefined}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors ${
+                      isInPlaylist ? 'text-white' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                    } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <ListPlus className={`h-4 w-4 ${isInPlaylist ? 'fill-white' : ''}`} />
                     {isInPlaylist ? 'In Playlist' : 'Add to Playlist'}
-                  </Button>
+                  </div>
 
                   <Button variant="outline" size="sm" onClick={handleShare}>
                     <Share2 className="h-4 w-4 mr-2" />
@@ -512,7 +487,35 @@ export default function TechniquePage() {
                 {technique.description && (
                   <div className="pt-4 border-t">
                     <h3 className="font-medium mb-2">Description</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{technique.description}</p>
+                    <div className="relative">
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${isDescriptionExpanded ? 'max-h-none' : 'max-h-[3rem]'}`}
+                        style={{
+                          lineHeight: '1.5rem',
+                          WebkitLineClamp: isDescriptionExpanded ? 'none' : '2',
+                          display: isDescriptionExpanded ? 'block' : '-webkit-box',
+                          WebkitBoxOrient: isDescriptionExpanded ? 'unset' : 'vertical',
+                        }}
+                      >
+                        <p className="text-muted-foreground whitespace-pre-wrap">{technique.description}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                        className="mt-2 px-3 py-1 h-auto text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        {isDescriptionExpanded ? (
+                          <>
+                            Show Less <ChevronUp className="h-4 w-4 ml-1" />
+                          </>
+                        ) : (
+                          <>
+                            Show More <ChevronDown className="h-4 w-4 ml-1" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

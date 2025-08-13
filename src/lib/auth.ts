@@ -10,6 +10,7 @@ export interface RegistrationData {
   lastName: string;
   username: string;
   beltLevel: 'White' | 'Blue' | 'Purple' | 'Brown' | 'Black';
+  gender: 'male' | 'female';
   height: number; // in meters
   weight: number; // in kg
   dateOfBirth: string;
@@ -40,8 +41,10 @@ export const authService = {
         last_name: data.lastName,
         username: data.username,
         belt_level: data.beltLevel,
+        gender: data.gender,
         height: data.height,
         weight: data.weight,
+        weight_lbs: data.weight ? convertWeightToPounds(data.weight) : null,
         date_of_birth: data.dateOfBirth,
       });
 
@@ -104,6 +107,14 @@ export const authService = {
 
   // Update user profile
   async updateProfile(userId: string, updates: Partial<Profile>) {
+    // If weight is provided but not weight_lbs, calculate it
+    if (updates.weight && !updates.weight_lbs) {
+      updates.weight_lbs = convertWeightToPounds(updates.weight);
+    }
+    // If weight_lbs is provided but not weight, calculate it
+    if (updates.weight_lbs && !updates.weight) {
+      updates.weight = convertWeightToKg(updates.weight_lbs);
+    }
     const { data, error } = await supabase.from('profiles').update(updates).eq('id', userId).select().single();
 
     if (error) throw error;
@@ -170,7 +181,7 @@ export function convertHeightToMeters(feet: number, inches: number): number {
 
 // Convert weight from pounds to kilograms
 export function convertWeightToKg(pounds: number): number {
-  return pounds * 0.453592; // Convert pounds to kg
+  return Math.round(pounds * 0.453592 * 10) / 10; // Convert pounds to kg, rounded to 1 decimal
 }
 
 // Convert height from meters to feet/inches
@@ -183,5 +194,5 @@ export function convertHeightToFeetInches(meters: number): { feet: number; inche
 
 // Convert weight from kg to pounds
 export function convertWeightToPounds(kg: number): number {
-  return Math.round(kg / 0.453592);
+  return Math.round((kg / 0.453592) * 10) / 10; // Convert kg to pounds, rounded to 1 decimal
 }

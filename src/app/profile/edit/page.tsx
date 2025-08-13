@@ -20,6 +20,8 @@ import { Calendar as CalendarIcon, Save, X, Eye, EyeOff, Shield, AlertTriangle, 
 import { format as formatDate } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ImageUploadCrop } from '@/components/image-upload-crop';
+import * as FlagIcons from 'country-flag-icons/react/3x2';
+import { convertWeightToKg, convertWeightToPounds, convertHeightToFeetInches, convertHeightToMeters } from '@/lib/auth';
 
 const BELT_LEVELS = [
   { value: 'White', label: 'White' },
@@ -28,6 +30,45 @@ const BELT_LEVELS = [
   { value: 'Brown', label: 'Brown' },
   { value: 'Black', label: 'Black' },
 ];
+
+const COMPETITION_STATUS_OPTIONS = [
+  { value: 'Active', label: 'Active', color: 'bg-green-500' },
+  { value: 'Tournaments Only', label: 'Tournaments Only', color: 'bg-green-500' },
+  { value: 'Super Fights Only', label: 'Super Fights Only', color: 'bg-green-500' },
+  { value: 'Training Only', label: 'Training Only', color: 'bg-yellow-500' },
+  { value: 'Injury/InActive', label: 'Injury/InActive', color: 'bg-red-500' },
+];
+
+const COMPETITION_RANGE_OPTIONS = [
+  { value: 'International', label: 'International', description: 'Compete in international tournaments and events' },
+  { value: 'Country', label: 'Country', description: 'Compete in national tournaments and events' },
+  { value: 'State/Province/Region', label: 'State/Province/Region', description: 'Compete in regional tournaments and events' },
+  { value: 'Local (City/Town)', label: 'Local (City/Town)', description: 'Compete in local tournaments and events' },
+];
+
+// Popular countries list - you can expand this or use a full country list
+const COUNTRY_OPTIONS = [
+  { value: 'US', label: 'United States' },
+  { value: 'CA', label: 'Canada' },
+  { value: 'GB', label: 'United Kingdom' },
+  { value: 'AU', label: 'Australia' },
+  { value: 'BR', label: 'Brazil' },
+  { value: 'JP', label: 'Japan' },
+  { value: 'DE', label: 'Germany' },
+  { value: 'FR', label: 'France' },
+  { value: 'IT', label: 'Italy' },
+  { value: 'ES', label: 'Spain' },
+  { value: 'NL', label: 'Netherlands' },
+  { value: 'SE', label: 'Sweden' },
+  { value: 'NO', label: 'Norway' },
+  { value: 'DK', label: 'Denmark' },
+  { value: 'FI', label: 'Finland' },
+  { value: 'MX', label: 'Mexico' },
+  { value: 'AR', label: 'Argentina' },
+  { value: 'CL', label: 'Chile' },
+  { value: 'CO', label: 'Colombia' },
+  { value: 'PE', label: 'Peru' },
+].sort((a, b) => a.label.localeCompare(b.label));
 
 export default function EditProfilePage() {
   const { user, profile, updateProfile, uploadAvatar, refreshProfile } = useAuth();
@@ -48,8 +89,12 @@ export default function EditProfilePage() {
     last_name: '',
     username: '',
     belt_level: '',
+    gender: '',
     height: '',
+    height_ft: '',
+    height_in: '',
     weight: '',
+    weight_lbs: '',
     date_of_birth: undefined as Date | undefined,
     instagram_url: '',
     x_url: '',
@@ -58,6 +103,9 @@ export default function EditProfilePage() {
     youtube_url: '',
     website_url: '',
     spotify_url: '',
+    competition_status: '',
+    competition_range: '',
+    country: '',
     public_show_training_logs: true,
     public_show_stats: true,
     public_show_videos: true,
@@ -65,13 +113,24 @@ export default function EditProfilePage() {
 
   useEffect(() => {
     if (profile) {
+      let ft = '';
+      let inch = '';
+      if (profile.height) {
+        const h = convertHeightToFeetInches(profile.height);
+        ft = h.feet.toString();
+        inch = h.inches.toString();
+      }
       setFormData({
         first_name: profile.first_name || '',
         last_name: profile.last_name || '',
-        username: (profile as any).username || '',
+        username: profile.username || '',
         belt_level: profile.belt_level || '',
+        gender: profile.gender || '',
         height: profile.height?.toString() || '',
+        height_ft: ft,
+        height_in: inch,
         weight: profile.weight?.toString() || '',
+        weight_lbs: profile.weight_lbs?.toString() || (profile.weight ? convertWeightToPounds(profile.weight).toString() : ''),
         date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth) : undefined,
         instagram_url: profile.instagram_url || '',
         x_url: profile.x_url || '',
@@ -80,6 +139,9 @@ export default function EditProfilePage() {
         youtube_url: profile.youtube_url || '',
         website_url: profile.website_url || '',
         spotify_url: profile.spotify_id ? `https://open.spotify.com/track/${profile.spotify_id}` : '',
+        competition_status: profile.competition_status || '',
+        competition_range: profile.competition_range || '',
+        country: profile.country || '',
         public_show_training_logs: profile.public_show_training_logs ?? true,
         public_show_stats: profile.public_show_stats ?? true,
         public_show_videos: profile.public_show_videos ?? true,
@@ -100,14 +162,24 @@ export default function EditProfilePage() {
   // Additional effect to initialize form when we have both user and profile
   useEffect(() => {
     if (user && profile) {
-      // Force form initialization even if profile object is the same reference
+      let ft = '';
+      let inch = '';
+      if (profile.height) {
+        const h = convertHeightToFeetInches(profile.height);
+        ft = h.feet.toString();
+        inch = h.inches.toString();
+      }
       setFormData({
         first_name: profile.first_name || '',
         last_name: profile.last_name || '',
-        username: (profile as any).username || '',
+        username: profile.username || '',
         belt_level: profile.belt_level || '',
+        gender: profile.gender || '',
         height: profile.height?.toString() || '',
+        height_ft: ft,
+        height_in: inch,
         weight: profile.weight?.toString() || '',
+        weight_lbs: profile.weight_lbs?.toString() || (profile.weight ? convertWeightToPounds(profile.weight).toString() : ''),
         date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth) : undefined,
         instagram_url: profile.instagram_url || '',
         x_url: profile.x_url || '',
@@ -116,6 +188,9 @@ export default function EditProfilePage() {
         youtube_url: profile.youtube_url || '',
         website_url: profile.website_url || '',
         spotify_url: profile.spotify_id ? `https://open.spotify.com/track/${profile.spotify_id}` : '',
+        competition_status: profile.competition_status || '',
+        competition_range: profile.competition_range || '',
+        country: profile.country || '',
         public_show_training_logs: profile.public_show_training_logs ?? true,
         public_show_stats: profile.public_show_stats ?? true,
         public_show_videos: profile.public_show_videos ?? true,
@@ -128,6 +203,56 @@ export default function EditProfilePage() {
       ...prev,
       [field]: value,
     }));
+  };
+
+  // Add conversion logic for weight fields
+  const handleWeightChange = (field: 'weight' | 'weight_lbs', value: string) => {
+    if (field === 'weight') {
+      setFormData((prev) => ({
+        ...prev,
+        weight: value,
+        weight_lbs: value ? convertWeightToPounds(parseFloat(value)).toString() : '',
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        weight_lbs: value,
+        weight: value ? convertWeightToKg(parseFloat(value)).toString() : '',
+      }));
+    }
+  };
+
+  // Add conversion logic for height fields
+  const handleHeightChange = (field: 'height' | 'height_ft' | 'height_in', value: string) => {
+    if (field === 'height') {
+      // meters to ft/in
+      if (value) {
+        const { feet, inches } = convertHeightToFeetInches(parseFloat(value));
+        setFormData((prev) => ({
+          ...prev,
+          height: value,
+          height_ft: feet.toString(),
+          height_in: inches.toString(),
+        }));
+      } else {
+        setFormData((prev) => ({ ...prev, height: '', height_ft: '', height_in: '' }));
+      }
+    } else {
+      // ft/in to meters
+      const ft = field === 'height_ft' ? value : formData.height_ft;
+      const inch = field === 'height_in' ? value : formData.height_in;
+      if (ft || inch) {
+        const meters = convertHeightToMeters(parseInt(ft || '0', 10), parseInt(inch || '0', 10));
+        setFormData((prev) => ({
+          ...prev,
+          height_ft: field === 'height_ft' ? value : prev.height_ft,
+          height_in: field === 'height_in' ? value : prev.height_in,
+          height: meters ? meters.toFixed(2) : '',
+        }));
+      } else {
+        setFormData((prev) => ({ ...prev, height: '', height_ft: '', height_in: '' }));
+      }
+    }
   };
 
   const extractSpotifyId = (url: string): string | null => {
@@ -169,8 +294,10 @@ export default function EditProfilePage() {
         last_name: formData.last_name || null,
         username: formData.username || null,
         belt_level: formData.belt_level ? (formData.belt_level as 'White' | 'Blue' | 'Purple' | 'Brown' | 'Black') : null,
+        gender: formData.gender ? (formData.gender as 'male' | 'female') : null,
         height: formData.height ? parseFloat(formData.height) : null,
         weight: formData.weight ? parseFloat(formData.weight) : null,
+        weight_lbs: formData.weight_lbs ? parseFloat(formData.weight_lbs) : null,
         date_of_birth: formData.date_of_birth ? formData.date_of_birth.toISOString().split('T')[0] : null,
         instagram_url: formData.instagram_url || null,
         x_url: formData.x_url || null,
@@ -179,6 +306,13 @@ export default function EditProfilePage() {
         youtube_url: formData.youtube_url || null,
         website_url: formData.website_url || null,
         spotify_id: extractSpotifyId(formData.spotify_url),
+        competition_status: formData.competition_status
+          ? (formData.competition_status as 'Active' | 'Tournaments Only' | 'Super Fights Only' | 'Training Only' | 'Injury/InActive')
+          : null,
+        competition_range: formData.competition_range
+          ? (formData.competition_range as 'International' | 'Country' | 'State/Province/Region' | 'Local (City/Town)')
+          : null,
+        country: formData.country || null,
         public_show_training_logs: formData.public_show_training_logs,
         public_show_stats: formData.public_show_stats,
         public_show_videos: formData.public_show_videos,
@@ -296,6 +430,16 @@ export default function EditProfilePage() {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getCompetitionStatusColor = (status: string) => {
+    const option = COMPETITION_STATUS_OPTIONS.find((opt) => opt.value === status);
+    return option ? option.color : 'bg-gray-400';
+  };
+
+  const getFlagComponent = (countryCode: string) => {
+    const FlagComponent = (FlagIcons as Record<string, React.ComponentType<{ className?: string }>>)[countryCode];
+    return FlagComponent ? FlagComponent : null;
   };
 
   const breadcrumbs = [
@@ -427,6 +571,121 @@ export default function EditProfilePage() {
             </Card>
           </div>
 
+          {/* Competition Status & Country */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Competition Status</CardTitle>
+                <CardDescription>Set your current competition activity level and range</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="competition_status">Competition Status</Label>
+                  <Select value={formData.competition_status || ''} onValueChange={(value) => handleInputChange('competition_status', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your competition status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMPETITION_STATUS_OPTIONS.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${status.color}`}></div>
+                            {status.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">This helps others understand your current competition activity level</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="competition_range">Competition Range</Label>
+                  <Select value={formData.competition_range || ''} onValueChange={(value) => handleInputChange('competition_range', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your competition range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMPETITION_RANGE_OPTIONS.map((range) => (
+                        <SelectItem key={range.value} value={range.value}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{range.label}</span>
+                            <span className="text-xs text-muted-foreground">{range.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Select the geographical range where you compete</p>
+                </div>
+
+                {(formData.competition_status || formData.competition_range) && (
+                  <div className="mt-3 p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-3 h-3 rounded-full ${getCompetitionStatusColor(formData.competition_status)}`}></div>
+                      <span className="font-medium">
+                        {formData.competition_status || 'Active'}
+                        {formData.competition_range && ` / ${formData.competition_range}`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.competition_status === 'Active' && 'Actively competing in all competition types'}
+                      {formData.competition_status === 'Tournaments Only' && 'Only participating in tournament competitions'}
+                      {formData.competition_status === 'Super Fights Only' && 'Only participating in super fight competitions'}
+                      {formData.competition_status === 'Training Only' && 'Focused on training, not actively competing'}
+                      {formData.competition_status === 'Injury/InActive' && 'Currently injured or inactive from competition'}
+                      {!formData.competition_status && 'Actively competing in all competition types'}
+                      {formData.competition_range && ` at ${formData.competition_range.toLowerCase()} level`}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Country</CardTitle>
+                <CardDescription>Select your country to display the flag next to your name</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Select value={formData.country || ''} onValueChange={(value) => handleInputChange('country', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRY_OPTIONS.map((country) => {
+                        const FlagComponent = getFlagComponent(country.value);
+                        return (
+                          <SelectItem key={country.value} value={country.value}>
+                            <div className="flex items-center gap-2">
+                              {FlagComponent && <FlagComponent className="w-4 h-3" />}
+                              {country.label}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Your country flag will appear next to your name on your profile</p>
+                  {formData.country &&
+                    (() => {
+                      const FlagComponent = getFlagComponent(formData.country);
+                      return (
+                        <div className="mt-3 p-3 bg-muted rounded-lg">
+                          <div className="flex items-center gap-2">
+                            {FlagComponent && <FlagComponent className="w-6 h-4" />}
+                            <span className="font-medium">{COUNTRY_OPTIONS.find((c) => c.value === formData.country)?.label}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -479,6 +738,19 @@ export default function EditProfilePage() {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gender</Label>
+                <Select value={formData.gender || ''} onValueChange={(value) => handleInputChange('gender', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="height">Height (meters)</Label>
@@ -487,9 +759,41 @@ export default function EditProfilePage() {
                     type="number"
                     step="0.01"
                     value={formData.height}
-                    onChange={(e) => handleInputChange('height', e.target.value)}
+                    onChange={(e) => handleHeightChange('height', e.target.value)}
                     placeholder="e.g., 1.75"
                   />
+                </div>
+                <div className="flex gap-2 items-end">
+                  <div className="space-y-2">
+                    <Label htmlFor="height_ft">Height (ft)</Label>
+                    <Select value={formData.height_ft} onValueChange={(value) => handleHeightChange('height_ft', value)}>
+                      <SelectTrigger id="height_ft">
+                        <SelectValue placeholder="ft" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 8 }, (_, i) => (
+                          <SelectItem key={i + 3} value={(i + 3).toString()}>
+                            {i + 3}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="height_in">Height (in)</Label>
+                    <Select value={formData.height_in} onValueChange={(value) => handleHeightChange('height_in', value)}>
+                      <SelectTrigger id="height_in">
+                        <SelectValue placeholder="in" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <SelectItem key={i} value={i.toString()}>
+                            {i}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="weight">Weight (kg)</Label>
@@ -498,8 +802,19 @@ export default function EditProfilePage() {
                     type="number"
                     step="0.1"
                     value={formData.weight}
-                    onChange={(e) => handleInputChange('weight', e.target.value)}
+                    onChange={(e) => handleWeightChange('weight', e.target.value)}
                     placeholder="e.g., 70.5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="weight_lbs">Weight (lbs)</Label>
+                  <Input
+                    id="weight_lbs"
+                    type="number"
+                    step="0.1"
+                    value={formData.weight_lbs}
+                    onChange={(e) => handleWeightChange('weight_lbs', e.target.value)}
+                    placeholder="e.g., 155.4"
                   />
                 </div>
               </div>

@@ -7,13 +7,10 @@ import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { Search, BookOpen, Plus, DollarSign } from 'lucide-react';
+import { Search, BookOpen, DollarSign } from 'lucide-react';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-
-const STATUS_OPTIONS = ['draft', 'published', 'archived'];
 
 interface Instructional {
   id: string;
@@ -32,14 +29,12 @@ export default function InstructionalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [showMyInstructionals, setShowMyInstructionals] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
   useEffect(() => {
     fetchInstructionals();
-  }, [user, searchTerm, selectedStatus, showMyInstructionals]);
+  }, [user, searchTerm]);
 
   const fetchInstructionals = async () => {
     if (!user) return;
@@ -49,27 +44,13 @@ export default function InstructionalsPage() {
 
     try {
       let query = supabase.from('instructionals').select('*');
-
-      // Apply filters
-      if (showMyInstructionals) {
-        query = query.eq('user_id', user.id);
-      } else {
-        query = query.eq('status', 'published');
-      }
-
-      if (selectedStatus && showMyInstructionals) {
-        query = query.eq('status', selectedStatus);
-      }
-
+      // Only show published instructionals
+      query = query.eq('status', 'published');
       if (searchTerm) {
         query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       }
-
-      // Order by creation date
       query = query.order('created_at', { ascending: false });
-
       const { data, error } = await query;
-
       if (error) {
         setError('Failed to load instructionals');
         console.error('Error fetching instructionals:', error);
@@ -93,7 +74,7 @@ export default function InstructionalsPage() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedStatus, showMyInstructionals]);
+  }, [searchTerm]);
 
   const breadcrumbs = [
     { label: 'Dashboard', href: '/feed' },
@@ -104,14 +85,8 @@ export default function InstructionalsPage() {
     setSearchTerm(value);
   };
 
-  const handleStatusChange = (value: string) => {
-    setSelectedStatus(value === 'all' ? '' : value);
-  };
-
   const clearFilters = () => {
     setSearchTerm('');
-    setSelectedStatus('');
-    setShowMyInstructionals(false);
   };
 
   const formatPrice = (price: number) => {
@@ -161,12 +136,6 @@ export default function InstructionalsPage() {
                   </CardTitle>
                   <CardDescription>Browse and create instructional content</CardDescription>
                 </div>
-                <Button asChild>
-                  <Link href="/instructionals/new">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Instructional
-                  </Link>
-                </Button>
               </div>
             </CardHeader>
           </Card>
@@ -184,85 +153,34 @@ export default function InstructionalsPage() {
   return (
     <DashboardLayout breadcrumbs={breadcrumbs}>
       <div className="space-y-6">
-        {/* Header */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                  <BookOpen className="h-6 w-6" />
-                  Instructionals
-                </CardTitle>
-                <CardDescription>Browse and create instructional content</CardDescription>
-              </div>
-              <Button asChild>
-                <Link href="/instructionals/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Instructional
-                </Link>
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
+        {/* Header and Subheader (no Card) */}
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <BookOpen className="h-6 w-6" />
+            Instructionals
+          </h1>
+          <p className="text-muted-foreground">Browse and create instructional content</p>
+        </div>
 
-        {/* Search and Filter */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" />
-                <Input placeholder="Search instructionals..." value={searchTerm} onChange={(e) => handleSearchChange(e.target.value)} className="pl-10" />
-              </div>
-
-              <Button variant={showMyInstructionals ? 'default' : 'outline'} onClick={() => setShowMyInstructionals(!showMyInstructionals)}>
-                {showMyInstructionals ? 'Show All' : 'My Instructionals'}
-              </Button>
-
-              {showMyInstructionals && (
-                <Select value={selectedStatus || 'all'} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    {STATUS_OPTIONS.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {(searchTerm || selectedStatus || showMyInstructionals) && (
-                <Button variant="outline" onClick={clearFilters}>
-                  Clear Filters
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Search Bar (no Card) */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" />
+            <Input placeholder="Search instructionals..." value={searchTerm} onChange={(e) => handleSearchChange(e.target.value)} className="pl-10" />
+          </div>
+          {searchTerm && (
+            <Button variant="outline" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+          )}
+        </div>
 
         {/* Instructionals Grid */}
         {instructionals.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
               <div className="text-center text-muted-foreground py-8">
-                {showMyInstructionals ? (
-                  <div className="space-y-4">
-                    <div>You have not created any instructionals yet.</div>
-                    <Button asChild>
-                      <Link href="/instructionals/new">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Your First Instructional
-                      </Link>
-                    </Button>
-                  </div>
-                ) : searchTerm || selectedStatus ? (
-                  'No instructionals found. Try adjusting your search criteria.'
-                ) : (
-                  'No published instructionals available yet.'
-                )}
+                {searchTerm ? 'No instructionals found. Try adjusting your search criteria.' : 'No published instructionals available yet.'}
               </div>
             </CardContent>
           </Card>
@@ -303,10 +221,8 @@ export default function InstructionalsPage() {
                         {instructional.description && <p className="text-xs text-muted-foreground line-clamp-2">{instructional.description}</p>}
 
                         <div className="flex justify-between items-center pt-2">
-                          <span className="text-xs text-muted-foreground">{showMyInstructionals ? 'My Instructional' : 'Instructional'}</span>
-                          {showMyInstructionals && (
-                            <span className="text-xs px-2 py-1 rounded">{instructional.status.charAt(0).toUpperCase() + instructional.status.slice(1)}</span>
-                          )}
+                          <span className="text-xs text-muted-foreground">Instructional</span>
+                          <span className="text-xs px-2 py-1 rounded">{instructional.status.charAt(0).toUpperCase() + instructional.status.slice(1)}</span>
                         </div>
                       </div>
                     </CardContent>

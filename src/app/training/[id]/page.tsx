@@ -164,7 +164,7 @@ export default function SingleSessionPage() {
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-3xl font-bold">Training Session Details</CardTitle>
-              <CardDescription>Session from {session.date}</CardDescription>
+              <CardDescription>Session from {new Date(session.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleEdit}>
@@ -183,40 +183,40 @@ export default function SingleSessionPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <div className="font-semibold text-sm text-muted-foreground">Date</div>
-              <div className="text-lg">{session.date}</div>
+              <div>{new Date(session.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-sm text-muted-foreground">Class Time</div>
-              <div className="text-lg">{session.class_time}</div>
+              <div>{session.class_time}</div>
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-sm text-muted-foreground">Location</div>
-              <div className="text-lg">{session.location}</div>
+              <div>{session.location}</div>
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-sm text-muted-foreground">Format/Uniform</div>
-              <div className="text-lg">{session.format_uniform}</div>
+              <div>{session.format_uniform}</div>
             </div>
           </div>
 
           {session.category && (
             <div className="space-y-1">
               <div className="font-semibold text-sm text-muted-foreground">Category</div>
-              <div className="text-lg">{session.category}</div>
+              <div>{session.category}</div>
             </div>
           )}
 
           {session.class_summary && (
             <div className="space-y-1">
               <div className="font-semibold text-sm text-muted-foreground">Class Summary</div>
-              <div className="text-base  p-3 rounded-md">{session.class_summary}</div>
+              <div className="rounded-md">{session.class_summary}</div>
             </div>
           )}
 
           {session.notes && (
             <div className="space-y-1">
               <div className="font-semibold text-sm text-muted-foreground">Notes</div>
-              <div className="text-base  p-3 rounded-md">{session.notes}</div>
+              <div className="rounded-md">{session.notes}</div>
             </div>
           )}
 
@@ -225,10 +225,8 @@ export default function SingleSessionPage() {
             <div className="space-y-2">
               <div className="font-semibold text-sm text-muted-foreground">Sparring</div>
               <div className="flex flex-wrap gap-2">
-                <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm dark:bg-gray-800 dark:text-gray-300">Rounds: {session.rounds}</span>
-                <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm dark:bg-gray-800 dark:text-gray-300">
-                  Minutes/Round: {session.minutes_per_round}
-                </span>
+                <span className="bg-white text-black px-3 py-1 rounded-full text-sm">Rounds: {session.rounds}</span>
+                <span className="bg-white text-black px-3 py-1 rounded-full text-sm">Minutes/Round: {session.minutes_per_round}</span>
               </div>
             </div>
           )}
@@ -238,10 +236,6 @@ export default function SingleSessionPage() {
             <Button variant="outline" onClick={() => router.push('/training')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Training
-            </Button>
-            <Button onClick={handleEdit}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Session
             </Button>
           </div>
         </CardContent>
