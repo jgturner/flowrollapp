@@ -159,9 +159,8 @@ export function UpcomingMatchesSection() {
       }
 
       // Transform confirmed matches
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const transformedConfirmed = (confirmedMatches || [])
-        .map((match: any) => {
+        .map((match: Record<string, unknown>) => {
           const event = events?.find((e) => e.id === match.event_matches.event_id);
           if (!event) return null;
 
@@ -204,9 +203,8 @@ export function UpcomingMatchesSection() {
         .filter(Boolean) as UpcomingMatch[];
 
       // Transform pending requests
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const transformedPending = (pendingRequests || [])
-        .map((request: any) => {
+        .map((request: Record<string, unknown>) => {
           const event = events?.find((e) => e.id === request.event_matches.event_id);
           if (!event) return null;
 

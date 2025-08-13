@@ -1,7 +1,7 @@
 module.exports = {
   extends: ['next/core-web-vitals'],
   rules: {
-    // Temporarily disable some rules for deployment
+    // Convert all errors to warnings for deployment
     '@typescript-eslint/no-unused-vars': 'warn',
     '@typescript-eslint/no-explicit-any': 'warn',
     'react/no-unescaped-entities': 'warn',

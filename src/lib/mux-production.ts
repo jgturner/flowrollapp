@@ -43,7 +43,7 @@ export class MuxProductionService {
   /**
    * Create a new direct upload for video content
    */
-  async createUpload(_filename: string, _fileSize: number): Promise<MuxUploadResponse> {
+  async createUpload(): Promise<MuxUploadResponse> {
     try {
       // Create upload with Mux API
       const upload = await this.muxClient.Video.Uploads.create({
@@ -224,7 +224,7 @@ export class MuxProductionService {
   /**
    * Create a signed URL for secure video playback
    */
-  createSignedUrl(playbackId: string, _expiresIn: number = 3600): string {
+  createSignedUrl(playbackId: string): string {
     // In production, you would use Mux's signing service
     // For now, return the public URL
     return this.getPlaybackUrl(playbackId);

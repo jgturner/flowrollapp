@@ -144,7 +144,7 @@ export function MatchRequestSystem({ userRole, eventId, matchId }: MatchRequestS
       }));
 
       setRequests(mappedRequests);
-    } catch (err) {
+    } catch {
       setError('Failed to load requests');
       console.error('Error:', err);
     } finally {
@@ -189,7 +189,7 @@ export function MatchRequestSystem({ userRole, eventId, matchId }: MatchRequestS
       }
 
       await fetchRequests();
-    } catch (err) {
+    } catch {
       console.error('Error handling request:', err);
     }
   };
@@ -380,7 +380,7 @@ function RequestsList({ requests, onAction, showActions }: RequestsListProps) {
             {request.message && (
               <div className="bg-muted/30 rounded-lg p-3">
                 <p className="text-sm">
-                  <span className="font-medium">Message:</span> "{request.message}"
+                  <span className="font-medium">Message:</span> &ldquo;{request.message}&rdquo;
                 </p>
               </div>
             )}
@@ -439,7 +439,7 @@ export function MatchRequestForm({ matchId, matchTitle, onRequestSent }: { match
         goals: '',
       });
       onRequestSent();
-    } catch (err) {
+    } catch {
       console.error('Error:', err);
     } finally {
       setSubmitting(false);
@@ -457,7 +457,7 @@ export function MatchRequestForm({ matchId, matchTitle, onRequestSent }: { match
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Request to Join Match</DialogTitle>
-          <DialogDescription>Send a request to join "{matchTitle}". The event creator will review your request.</DialogDescription>
+          <DialogDescription>Send a request to join &ldquo;{matchTitle}&rdquo;. The event creator will review your request.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -519,9 +519,9 @@ export function MatchRequestForm({ matchId, matchTitle, onRequestSent }: { match
 // Hook for managing match requests
 export function useMatchRequests(userRole: 'requester' | 'creator', eventId?: string) {
   const { user } = useAuth();
-  const [requests, setRequests] = useState<MatchRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [requests] = useState<MatchRequest[]>([]);
+  const [loading] = useState(true);
+  const [error] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -553,7 +553,7 @@ export function useMatchRequests(userRole: 'requester' | 'creator', eventId?: st
 
       await fetchRequests();
       return { success: true };
-    } catch (err) {
+    } catch {
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
@@ -574,7 +574,7 @@ export function useMatchRequests(userRole: 'requester' | 'creator', eventId?: st
 
       await fetchRequests();
       return { success: true };
-    } catch (err) {
+    } catch {
       return { success: false, error: 'An unexpected error occurred' };
     }
   };

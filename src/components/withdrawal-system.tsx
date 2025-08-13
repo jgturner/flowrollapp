@@ -302,7 +302,7 @@ interface WithdrawalButtonProps {
   disabled?: boolean;
 }
 
-export function WithdrawalButton({ matchId, eventId, matchTitle, eventTitle, matchDate, onWithdrawalComplete, disabled = false }: WithdrawalButtonProps) {
+export function WithdrawalButton({ matchId, matchTitle, eventTitle, matchDate, onWithdrawalComplete, disabled = false }: WithdrawalButtonProps) {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<'form' | 'confirmation' | 'processing'>('form');
@@ -312,7 +312,7 @@ export function WithdrawalButton({ matchId, eventId, matchTitle, eventTitle, mat
     confirmationText: '',
     acknowledgeConsequences: false,
   });
-  const [submitting, setSubmitting] = useState(false);
+  const [, setSubmitting] = useState(false);
 
   const resetForm = () => {
     setForm({
@@ -384,7 +384,7 @@ export function WithdrawalButton({ matchId, eventId, matchTitle, eventTitle, mat
         <DialogHeader>
           <DialogTitle>Withdraw from Match</DialogTitle>
           <DialogDescription>
-            You are withdrawing from "{matchTitle}" in {eventTitle}
+            You are withdrawing from &ldquo;{matchTitle}&rdquo; in {eventTitle}
           </DialogDescription>
         </DialogHeader>
 
@@ -474,7 +474,7 @@ export function WithdrawalButton({ matchId, eventId, matchTitle, eventTitle, mat
               </div>
 
               <div>
-                <Label htmlFor="confirmation">Type "WITHDRAW" to confirm (case-insensitive)</Label>
+                <Label htmlFor="confirmation">Type &ldquo;WITHDRAW&rdquo; to confirm (case-insensitive)</Label>
                 <Input
                   id="confirmation"
                   value={form.confirmationText}
