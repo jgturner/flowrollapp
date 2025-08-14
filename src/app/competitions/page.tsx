@@ -217,12 +217,12 @@ export default function CompetitionsPage() {
       <DashboardLayout breadcrumbs={breadcrumbs}>
         <Card className="border-none">
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div className="flex-1">
                 <CardTitle className="text-3xl font-bold">Competitions</CardTitle>
                 <CardDescription>Track your competition history and results</CardDescription>
               </div>
-              <Button onClick={handleCreateNew}>
+              <Button onClick={handleCreateNew} className="sm:flex-shrink-0">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Competition
               </Button>
@@ -240,12 +240,12 @@ export default function CompetitionsPage() {
     <DashboardLayout breadcrumbs={breadcrumbs}>
       <Card className="border-none">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex-1">
               <CardTitle className="text-3xl font-bold">Competitions</CardTitle>
               <CardDescription>Track your competition history and results</CardDescription>
             </div>
-            <Button onClick={handleCreateNew}>
+            <Button onClick={handleCreateNew} className="sm:flex-shrink-0">
               <Plus className="mr-2 h-4 w-4" />
               Add Competition
             </Button>

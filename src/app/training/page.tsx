@@ -208,12 +208,12 @@ export default function TrainingPage() {
       <DashboardLayout breadcrumbs={breadcrumbs}>
         <Card className="border-none">
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div className="flex-1">
                 <CardTitle className="text-3xl font-bold">Training Logs</CardTitle>
                 <CardDescription>Your training session history</CardDescription>
               </div>
-              <Button onClick={handleCreateNew}>
+              <Button onClick={handleCreateNew} className="sm:flex-shrink-0">
                 <Plus className="mr-2 h-4 w-4" />
                 New Training Log
               </Button>
@@ -295,12 +295,12 @@ export default function TrainingPage() {
       <DashboardLayout breadcrumbs={breadcrumbs}>
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div className="flex-1">
                 <CardTitle className="text-3xl font-bold">Training Logs</CardTitle>
                 <CardDescription>Your training session history</CardDescription>
               </div>
-              <Button onClick={handleCreateNew}>
+              <Button onClick={handleCreateNew} className="sm:flex-shrink-0">
                 <Plus className="mr-2 h-4 w-4" />
                 New Training Log
               </Button>
@@ -396,12 +396,12 @@ export default function TrainingPage() {
     <DashboardLayout breadcrumbs={breadcrumbs}>
       <Card className="border-none">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex-1">
               <CardTitle className="text-3xl font-bold">Training Logs</CardTitle>
               <CardDescription>Your training session history</CardDescription>
             </div>
-            <Button onClick={handleCreateNew}>
+            <Button onClick={handleCreateNew} className="sm:flex-shrink-0">
               <Plus className="mr-2 h-4 w-4" />
               New Training Log
             </Button>
