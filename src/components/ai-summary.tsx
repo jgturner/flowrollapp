@@ -13,26 +13,7 @@ interface AISummaryProps {
 export function AISummary({ title, content, className = '' }: AISummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const { truncatedContent, shouldTruncate } = useMemo(() => {
-    if (!content) return { truncatedContent: '', shouldTruncate: false };
-    
-    // Split by sentence endings - simplified approach
-    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    
-    // First try sentence-based truncation
-    if (sentences.length > 2) {
-      const truncated = sentences.slice(0, 2).join('. ') + '.';
-      return { truncatedContent: truncated, shouldTruncate: true };
-    }
-    
-    // Fallback: if content is very long (>300 chars), truncate by character count
-    if (content.length > 300) {
-      const truncated = content.substring(0, 300) + '...';
-      return { truncatedContent: truncated, shouldTruncate: true };
-    }
-    
-    return { truncatedContent: content, shouldTruncate: false };
-  }, [content]);
+  const shouldTruncate = content && content.length > 200;
 
   if (!content) return null;
 
@@ -40,8 +21,8 @@ export function AISummary({ title, content, className = '' }: AISummaryProps) {
     <div className={`rounded-lg border bg-card p-4 ${className}`}>
       <div className="font-semibold text-card-foreground mb-2">{title}</div>
       <div className="text-muted-foreground space-y-2">
-        <div className="leading-relaxed">
-          {shouldTruncate ? (isExpanded ? content : truncatedContent) : content}
+        <div className={`leading-relaxed ${shouldTruncate && !isExpanded ? 'line-clamp-3' : ''}`}>
+          {content}
         </div>
         {shouldTruncate && (
           <Button
