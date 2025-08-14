@@ -82,6 +82,8 @@ export default function EditProfilePage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
+  const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
+  const [selectedBannerPreview, setSelectedBannerPreview] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -273,11 +275,18 @@ export default function EditProfilePage() {
 
     try {
       let imageUploaded = false;
+      let bannerUploaded = false;
 
       // Upload new image if one was selected
       if (selectedImageFile) {
         await handleImageUpload(selectedImageFile);
         imageUploaded = true;
+      }
+
+      // Upload new banner if one was selected
+      if (selectedBannerFile) {
+        await handleBannerUpload(selectedBannerFile);
+        bannerUploaded = true;
       }
 
       // Validate username format if provided
@@ -323,11 +332,13 @@ export default function EditProfilePage() {
       // Force refresh profile data to ensure latest avatar URL is loaded
       await refreshProfile();
 
-      setSuccess(imageUploaded ? 'Profile and image updated successfully!' : 'Profile updated successfully!');
+      setSuccess(imageUploaded || bannerUploaded ? 'Profile and image updated successfully!' : 'Profile updated successfully!');
 
       // Clear the selected image state
       setSelectedImageFile(null);
       setSelectedImagePreview(null);
+      setSelectedBannerFile(null);
+      setSelectedBannerPreview(null);
 
       // Redirect to profile after successful update
       setTimeout(() => {
@@ -363,6 +374,25 @@ export default function EditProfilePage() {
     }
 
     const publicUrl = await uploadAvatar(file);
+    return publicUrl;
+  };
+
+  const handleBannerUpload = async (file: File) => {
+    // Validate file
+    if (!file) {
+      throw new Error('No file selected');
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      // 10MB limit for banner images
+      throw new Error('File size too large. Please select an image under 10MB.');
+    }
+
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Please select a valid image file.');
+    }
+
+    const publicUrl = await authService.uploadBanner(user!.id, file);
     return publicUrl;
   };
 
@@ -538,38 +568,90 @@ export default function EditProfilePage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Current Anthem</CardTitle>
-                <CardDescription>Add your favorite song to display on your profile</CardDescription>
+                <CardTitle>Profile Banner</CardTitle>
+                <CardDescription>Upload a banner image to display behind your profile information</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <Label htmlFor="spotify_url_main">Spotify Song URL</Label>
-                  <Input
-                    id="spotify_url_main"
-                    value={formData.spotify_url}
-                    onChange={(e) => handleInputChange('spotify_url', e.target.value)}
-                    placeholder="https://open.spotify.com/track/5KvAQPrRxcyTOpd2C32f33"
-                  />
-                  <p className="text-sm text-muted-foreground">Paste the URL of your favorite song from Spotify</p>
-                </div>
-                {formData.spotify_url && extractSpotifyId(formData.spotify_url) && (
-                  <div className="mt-4">
-                    <p className="text-sm text-muted-foreground mb-2">Preview:</p>
-                    <iframe
-                      style={{ borderRadius: '12px' }}
-                      src={`https://open.spotify.com/embed/track/${extractSpotifyId(formData.spotify_url)}?utm_source=generator`}
-                      width="100%"
-                      height="152"
-                      frameBorder="0"
-                      allowFullScreen={true}
-                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                      loading="lazy"
-                    />
+                <ImageUploadCrop
+                  onImageSelect={async (croppedImageUrl) => {
+                    if (croppedImageUrl) {
+                      try {
+                        // Convert data URL to File
+                        const response = await fetch(croppedImageUrl);
+                        if (!response.ok) {
+                          throw new Error('Failed to convert image data');
+                        }
+
+                        const blob = await response.blob();
+                        if (blob.size === 0) {
+                          throw new Error('Image data is empty');
+                        }
+
+                        const file = new File([blob], 'banner.jpg', { type: 'image/jpeg' });
+
+                        // Store the file and preview instead of immediately uploading
+                        setSelectedBannerFile(file);
+                        setSelectedBannerPreview(croppedImageUrl);
+                        setError(null);
+                      } catch (error) {
+                        console.error('Error converting image:', error);
+                        setError('Failed to process image. Please try again.');
+                      }
+                    } else {
+                      // Clear selection if no image
+                      setSelectedBannerFile(null);
+                      setSelectedBannerPreview(null);
+                    }
+                  }}
+                  currentImageUrl={selectedBannerPreview || (profile?.banner_url ? authService.getBannerUrl(profile.banner_url) || undefined : undefined)}
+                  className="max-w-md"
+                />
+                {selectedBannerFile && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm text-blue-800">New banner selected. Click &quot;Save Changes&quot; to update your profile banner.</span>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
+
+          {/* Spotify Embed */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Current Anthem</CardTitle>
+              <CardDescription>Add your favorite song to display on your profile</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="spotify_url_main">Spotify Song URL</Label>
+                <Input
+                  id="spotify_url_main"
+                  value={formData.spotify_url}
+                  onChange={(e) => handleInputChange('spotify_url', e.target.value)}
+                  placeholder="https://open.spotify.com/track/5KvAQPrRxcyTOpd2C32f33"
+                />
+                <p className="text-sm text-muted-foreground">Paste the URL of your favorite song from Spotify</p>
+              </div>
+              {formData.spotify_url && extractSpotifyId(formData.spotify_url) && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+                  <iframe
+                    style={{ borderRadius: '12px' }}
+                    src={`https://open.spotify.com/embed/track/${extractSpotifyId(formData.spotify_url)}?utm_source=generator`}
+                    width="100%"
+                    height="152"
+                    frameBorder="0"
+                    allowFullScreen={true}
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Competition Status & Country */}
           <div className="grid gap-6 md:grid-cols-2">

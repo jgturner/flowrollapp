@@ -23,6 +23,7 @@ export type Database = {
           weight_lbs: number | null;
           date_of_birth: string | null;
           avatar_url: string | null;
+          banner_url: string | null;
           instagram_url: string | null;
           x_url: string | null;
           facebook_url: string | null;
@@ -54,6 +55,7 @@ export type Database = {
           weight_lbs?: number | null;
           date_of_birth?: string | null;
           avatar_url?: string | null;
+          banner_url?: string | null;
           instagram_url?: string | null;
           x_url?: string | null;
           facebook_url?: string | null;
@@ -85,6 +87,7 @@ export type Database = {
           weight_lbs?: number | null;
           date_of_birth?: string | null;
           avatar_url?: string | null;
+          banner_url?: string | null;
           instagram_url?: string | null;
           x_url?: string | null;
           facebook_url?: string | null;

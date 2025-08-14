@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, Medal, Target, Calendar, Dumbbell, Zap, Users } from 'lucide-react';
+import { AISummary } from '@/components/ai-summary';
 
 const FORMATS = [
   { key: 'Gi', color: 'bg-blue-500' },
@@ -279,12 +280,7 @@ export default function StatsPage() {
                   <>
                     {xaiLoading && <Skeleton className="h-6 w-full mb-2" />}
                     {xaiError && <div className="text-red-500 text-sm mb-2">{xaiError}</div>}
-                    {xaiSummary && !xaiLoading && !xaiError && (
-                      <div className="p-4 rounded-lg border text-base">
-                        <strong>Training Summary & Recommendation:</strong>
-                        <div className="mt-1">{xaiSummary}</div>
-                      </div>
-                    )}
+                    {xaiSummary && !xaiLoading && !xaiError && <AISummary title="Training Summary & Recommendation:" content={xaiSummary} />}
                   </>
                 ) : (
                   <Card>
@@ -304,12 +300,7 @@ export default function StatsPage() {
                   <>
                     {xaiCompLoading && <Skeleton className="h-6 w-full mb-2" />}
                     {xaiCompError && <div className="text-red-500 text-sm mb-2">{xaiCompError}</div>}
-                    {xaiCompSummary && !xaiCompLoading && !xaiCompError && (
-                      <div className="p-4 rounded-lg border text-base">
-                        <strong>Competition Summary & Recommendation:</strong>
-                        <div className="mt-1">{xaiCompSummary}</div>
-                      </div>
-                    )}
+                    {xaiCompSummary && !xaiCompLoading && !xaiCompError && <AISummary title="Competition Summary & Recommendation:" content={xaiCompSummary} />}
                   </>
                 ) : (
                   <Card>

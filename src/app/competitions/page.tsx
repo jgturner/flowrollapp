@@ -18,6 +18,7 @@ import { Plus, CalendarIcon, X, Trophy, MapPin, Medal } from 'lucide-react';
 import Image from 'next/image';
 import { format as formatDate } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { AISummary } from '@/components/ai-summary';
 
 const PAGE_SIZE = 10;
 
@@ -270,12 +271,7 @@ export default function CompetitionsPage() {
               <div className="mb-6">
                 {xaiLoading && <Skeleton className="h-6 w-full mb-2" />}
                 {xaiError && <div className="text-red-500 text-sm mb-2">{xaiError}</div>}
-                {xaiSummary && !xaiLoading && !xaiError && (
-                  <div className="p-4 rounded-lg border text-base">
-                    <strong>Competition Summary & Recommendation:</strong>
-                    <div className="mt-1">{xaiSummary}</div>
-                  </div>
-                )}
+                {xaiSummary && !xaiLoading && !xaiError && <AISummary title="Competition Summary & Recommendation:" content={xaiSummary} />}
               </div>
 
               {/* Filter Bar */}

@@ -45,6 +45,7 @@ interface ProfileData {
   weight: number | null;
   date_of_birth: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   instagram_url: string | null;
   x_url: string | null;
   facebook_url: string | null;
@@ -312,6 +313,11 @@ export default function ProfilePage() {
     return authService.getAvatarUrl(profile.avatar_url);
   };
 
+  const getBannerUrl = () => {
+    if (!profile?.banner_url) return null;
+    return authService.getBannerUrl(profile.banner_url);
+  };
+
   const formatHeight = (height: number | null) => {
     if (!height) return null;
     const feet = Math.floor(height * 3.28084);
@@ -373,12 +379,13 @@ export default function ProfilePage() {
     <DashboardLayout breadcrumbs={breadcrumbs}>
       <div className="space-y-6">
         {/* Profile Header */}
-        <div className="grid gap-6 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div className="flex items-start gap-4 flex-col sm:flex-row justify-center sm:justify-start">
-                  <div className="relative">
+        <div className="grid gap-6 grid-cols-1 xl:grid-cols-2">
+          <Card className="relative overflow-hidden w-full">
+            {profile.banner_url && <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20" style={{ backgroundImage: `url(${getBannerUrl()})` }} />}
+            <CardHeader className="relative z-10">
+              <div className="flex flex-col sm:flex-row justify-between items-start">
+                <div className="flex items-start gap-4 flex-col justify-center w-full sm:w-auto sm:flex-row sm:justify-start">
+                  <div className="relative flex justify-center w-full sm:w-auto sm:justify-start">
                     <div className="h-24 w-24 min-w-[96px] min-h-[96px] rounded-full bg-muted flex items-center justify-center overflow-hidden">
                       {getAvatarUrl() ? (
                         <Image src={getAvatarUrl()!} alt="Profile" width={96} height={96} className="object-cover w-full h-full" />
@@ -404,8 +411,8 @@ export default function ProfilePage() {
                       </div>
                     )}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-3">
+                  <div className="text-center sm:text-left w-full">
+                    <div className="flex items-center gap-3 justify-center sm:justify-start">
                       <h1 className="text-2xl font-bold mb-[-5px]">{getDisplayName()}</h1>
                       {profile.country &&
                         (() => {
@@ -414,7 +421,7 @@ export default function ProfilePage() {
                         })()}
                     </div>
                     {profile.username && <p className="text-muted-foreground">@{profile.username}</p>}
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 justify-center sm:justify-start">
                       {profile.belt_level && <Badge className={getBeltClass(profile.belt_level)}>{profile.belt_level} Belt</Badge>}
                       {profile.competition_status && (
                         <div className="flex items-center gap-1.5">
@@ -425,7 +432,7 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Social Media Links */}
-                    <div className="flex items-center gap-4 mt-2">
+                    <div className="flex items-center gap-4 mt-2 justify-center sm:justify-start">
                       {profile.instagram_url && (
                         <a
                           href={profile.instagram_url}
@@ -483,7 +490,7 @@ export default function ProfilePage() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground justify-center sm:justify-start">
                       <div
                         className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors"
                         onClick={() => router.push(`/followers/${profileId}`)}
@@ -497,27 +504,30 @@ export default function ProfilePage() {
                         <span>Joined {formatDate(new Date(profile.created_at), 'MMM yyyy')}</span>
                       </div>
                     </div>
+
+                    {/* Edit Profile Button - moved here and made secondary */}
+                    {isOwnProfile && (
+                      <div className="mt-3 flex justify-center sm:justify-start">
+                        <Button onClick={() => router.push('/profile/edit')} variant="secondary">
+                          <Edit3 className="h-4 w-4 mr-2" />
+                          Edit Profile
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {isOwnProfile ? (
-                    <Button onClick={() => router.push('/profile/edit')}>
-                      <Edit3 className="h-4 w-4 mr-2" />
-                      Edit Profile
+                  {!isOwnProfile && user && (
+                    <Button onClick={handleFollow} disabled={followLoading} variant={isFollowing ? 'outline' : 'default'}>
+                      {followLoading ? (
+                        <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                      ) : isFollowing ? (
+                        <UserMinus className="h-4 w-4 mr-2" />
+                      ) : (
+                        <UserPlus className="h-4 w-4 mr-2" />
+                      )}
+                      {isFollowing ? 'Unfollow' : 'Follow'}
                     </Button>
-                  ) : (
-                    user && (
-                      <Button onClick={handleFollow} disabled={followLoading} variant={isFollowing ? 'outline' : 'default'}>
-                        {followLoading ? (
-                          <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-                        ) : isFollowing ? (
-                          <UserMinus className="h-4 w-4 mr-2" />
-                        ) : (
-                          <UserPlus className="h-4 w-4 mr-2" />
-                        )}
-                        {isFollowing ? 'Unfollow' : 'Follow'}
-                      </Button>
-                    )
                   )}
                 </div>
               </div>
@@ -573,7 +583,7 @@ export default function ProfilePage() {
         </Card>
 
         {/* Stats and Info Grid */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Physical Stats */}
           <Card>
             <CardHeader>

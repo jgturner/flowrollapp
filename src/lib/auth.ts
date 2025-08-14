@@ -171,6 +171,57 @@ export const authService = {
     const cacheBuster = `?t=${Date.now()}`;
     return data.publicUrl + cacheBuster;
   },
+
+  // Upload banner image
+  async uploadBanner(userId: string, file: File): Promise<string> {
+    try {
+      // Get current profile to check for existing banner
+      const currentProfile = await this.getUserProfile(userId);
+
+      // Remove old banner if it exists
+      if (currentProfile?.banner_url) {
+        const { error: removeError } = await supabase.storage.from('backgrounds').remove([currentProfile.banner_url]);
+        if (removeError) {
+          console.warn('Error removing old banner:', removeError);
+        }
+      }
+
+      // Create a consistent filename for the user (using folder structure)
+      const fileExt = file.name.split('.').pop() || 'jpeg';
+      const filePath = `${userId}/banner.${fileExt}`;
+
+      // Upload the new file
+      const { error: uploadError } = await supabase.storage.from('backgrounds').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true, // This allows overwriting if the file already exists
+      });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      // Store just the file path in the database, not the full URL
+      await this.updateProfile(userId, { banner_url: filePath });
+
+      // Return the public URL for immediate use
+      const { data } = supabase.storage.from('backgrounds').getPublicUrl(filePath);
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Banner upload failed:', error);
+      throw error;
+    }
+  },
+
+  // Get banner URL from file path
+  getBannerUrl(path: string | null): string | null {
+    if (!path) return null;
+
+    const { data } = supabase.storage.from('backgrounds').getPublicUrl(path);
+    // Add cache-busting parameter to force browser to reload the image
+    const cacheBuster = `?t=${Date.now()}`;
+    return data.publicUrl + cacheBuster;
+  },
 };
 
 // Convert height from feet/inches to meters

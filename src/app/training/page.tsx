@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Plus, CalendarIcon, X, MapPin } from 'lucide-react';
 import { format as formatDate } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { AISummary } from '@/components/ai-summary';
 
 const PAGE_SIZE = 10;
 
@@ -476,12 +477,7 @@ export default function TrainingPage() {
               <>
                 {xaiLoading && <Skeleton className="h-6 w-full mb-2" />}
                 {xaiError && <div className="text-red-500 text-sm mb-2">{xaiError}</div>}
-                {xaiSummary && !xaiLoading && !xaiError && (
-                  <div className="p-4  rounded-lg border text-base">
-                    <strong>Training Summary & Recommendation:</strong>
-                    <div className="mt-1">{xaiSummary}</div>
-                  </div>
-                )}
+                {xaiSummary && !xaiLoading && !xaiError && <AISummary title="Training Summary & Recommendation:" content={xaiSummary} />}
               </>
             ) : (
               <Card>
